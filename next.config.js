@@ -1,21 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
+  experimental: {
+    serverComponentsExternalPackages: ["@genkit-ai/googleai"],
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "placehold.co",
-        port: "",
-        pathname: "/**",
-      },
-    ],
+    domains: ["images.unsplash.com", "via.placeholder.com"],
+    unoptimized: true,
   },
 }
 
