@@ -1,0 +1,559 @@
+import { createClient } from "@supabase/supabase-js"
+import * as XLSX from "xlsx"
+import JSZip from "jszip"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+export interface Product {
+  id?: string
+  name?: string
+  description?: string
+  sku?: string
+  category?: string
+  vendor?: string
+  price?: number
+  stock?: number
+  images?: string[]
+  subgrupo?: string
+  codigo_brk?: string
+  ref_brk?: string
+  posicion?: string
+  ref_fmsi_oem?: string
+  marca?: string
+  linea?: string
+  modelo?: string
+  version?: string
+  largo_mm?: number
+  ancho_mm?: number
+  espesor_mm?: number
+  diametro_a_mm?: number
+  alto_b_mm?: number
+  espesor_c_mm?: number
+  espesor_min_mm?: number
+  agujeros?: string
+  diametro_interno_a_mm?: number
+  diametro_orificio_central_c_mm?: number
+  altura_total_d_mm?: number
+  agujeros4?: string
+  diametro_interno_maximo?: number
+  diametro?: number
+  largo?: number
+  x_juego_pastilla?: string
+  largo_mm10?: number
+  specifications?: any
+  created_at?: string
+  updated_at?: string
+}
+
+export interface BulkUploadResult {
+  success: boolean
+  message: string
+  totalProducts: number
+  successfulProducts: number
+  failedProducts: number
+  errors: string[]
+}
+
+export interface UploadHistory {
+  id: string
+  upload_id: string
+  filename: string
+  total_products: number
+  successful_products: number
+  failed_products: number
+  created_at: string
+  status: "completed" | "failed" | "partial" | "rolled_back"
+  has_images: boolean
+  errors: string[]
+}
+
+// Memory storage fallback
+let memoryProducts: Product[] = []
+const memoryUploadHistory: UploadHistory[] = []
+
+// Check if Supabase is configured and initialize Firebase
+export async function checkSupabaseConnection(): Promise<boolean> {
+  try {
+    // Test Supabase connection
+    const { data, error } = await supabase.from("products").select("count").limit(1)
+    return !error
+  } catch {
+    return false
+  }
+}
+
+// Parse Excel/CSV file
+export async function parseExcelFile(file: File): Promise<Product[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet)
+
+        console.log("Raw Excel data:", jsonData) // Debug log
+
+        const products: Product[] = jsonData.map((row: any, index: number) => {
+          // Extract main fields
+          const subgrupo = String(row["SUBGRUPO"] || "")
+          const codigo_brk = String(row["CÓDIGOBRK"] || row["REF BRK"] || "")
+          const ref_brk = String(row["REF BRK"] || "")
+          const posicion = String(row["POSICIÓN"] || "")
+          const ref_fmsi_oem = String(row["REF FMSI / OEM"] || "")
+          const marca = String(row["MARCA"] || "")
+          const linea = String(row["LÍNEA"] || "")
+          const modelo = String(row["MODELO"] || "")
+          const version = String(row["VERSIÓN"] || "")
+
+          // Generate SKU: codigo_brk + marca + linea + modelo
+          const sku = `${codigo_brk}${marca}${linea}${modelo}`.replace(/\s+/g, "").toUpperCase()
+
+          // Generate name from available data
+          const name = `${marca} ${linea} ${modelo} ${subgrupo}`.trim() || "Producto sin nombre"
+
+          // Generate description
+          const description = `${subgrupo} ${posicion} para ${marca} ${linea} ${modelo} ${version}`.trim()
+
+          const product = {
+            name,
+            description,
+            sku,
+            category: subgrupo,
+            vendor: "BRK",
+            price: Number.parseFloat(row["PRECIO"] || "0") || 0,
+            stock: Number.parseInt(row["STOCK"] || "0") || 0,
+            images: [],
+            subgrupo,
+            codigo_brk,
+            ref_brk,
+            posicion,
+            ref_fmsi_oem,
+            marca,
+            linea,
+            modelo,
+            version,
+            largo_mm: Number.parseFloat(row["LARGO (mm)"] || "0") || null,
+            ancho_mm: Number.parseFloat(row["ANCHO (mm)"] || "0") || null,
+            espesor_mm: Number.parseFloat(row["ESPESOR (mm)"] || "0") || null,
+            diametro_a_mm: Number.parseFloat(row["DIÁMETRO (A) mm"] || "0") || null,
+            alto_b_mm: Number.parseFloat(row["ALTO (B) mm"] || "0") || null,
+            espesor_c_mm: Number.parseFloat(row["ESPESOR (C) mm"] || "0") || null,
+            espesor_min_mm: Number.parseFloat(row["ESPESOR MIN, mm"] || "0") || null,
+            agujeros: String(row["AGUJEROS"] || ""),
+            diametro_interno_a_mm: Number.parseFloat(row["DIÁMETRO INTERNO (A) mm"] || "0") || null,
+            diametro_orificio_central_c_mm: Number.parseFloat(row["DIAMETRO ORIFICIO CENTRAL (C) mm"] || "0") || null,
+            altura_total_d_mm: Number.parseFloat(row["ALTURA TOTAL (D) mm"] || "0") || null,
+            agujeros4: String(row["AGUJEROS4"] || ""),
+            diametro_interno_maximo: Number.parseFloat(row["DIÁMETRO INTERNO MÁXIMO"] || "0") || null,
+            diametro: Number.parseFloat(row["DIÁMETRO"] || "0") || null,
+            largo: Number.parseFloat(row["LARGO"] || "0") || null,
+            x_juego_pastilla: String(row["X JUEGO PASTILLA"] || ""),
+            largo_mm10: Number.parseFloat(row["LARGO (mm)10"] || "0") || null,
+            specifications: {},
+          }
+
+          console.log(`Product ${index + 1}:`, {
+            codigo_brk: product.codigo_brk,
+            name: product.name,
+            sku: product.sku,
+          }) // Debug log
+
+          return product
+        })
+
+        console.log(`Parsed ${products.length} products total`) // Debug log
+        resolve(products)
+      } catch (error) {
+        console.error("Error parsing Excel:", error)
+        reject(error)
+      }
+    }
+    reader.onerror = () => reject(new Error("Error reading file"))
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+// Parse ZIP file with images
+export async function parseZipFile(file: File): Promise<Map<string, Blob>> {
+  const zip = new JSZip()
+  const zipContent = await zip.loadAsync(file)
+  const imagesByFolder = new Map<string, Blob>()
+
+  console.log("ZIP file contents:", Object.keys(zipContent.files)) // Debug log
+
+  // Extract images from ZIP
+  for (const [filename, fileData] of Object.entries(zipContent.files)) {
+    // Skip directories and system files
+    if (fileData.dir || filename.startsWith("__MACOSX/") || filename.startsWith(".")) {
+      console.log(`Skipping directory/system file: ${filename}`)
+      continue
+    }
+
+    // Check if it's an image file
+    if (filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      try {
+        const arrayBuffer = await fileData.async("arraybuffer")
+        const blob = new Blob([arrayBuffer])
+        // Use just the filename without path
+        const cleanFilename = filename.split("/").pop() || filename
+        imagesByFolder.set(cleanFilename, blob)
+        console.log(`Extracted image: ${cleanFilename}`) // Debug log
+      } catch (error) {
+        console.error(`Error processing image ${filename}:`, error)
+      }
+    }
+  }
+
+  console.log(`Total images extracted: ${imagesByFolder.size}`) // Debug log
+  console.log("Image filenames:", Array.from(imagesByFolder.keys())) // Debug log
+  return imagesByFolder
+}
+
+// Upload image to Supabase Storage
+async function uploadImage(file: Blob, productCode: string, originalFilename: string): Promise<string | null> {
+  try {
+    console.log(`Attempting to upload image for product: ${productCode}`)
+
+    const arrayBuffer = await file.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+
+    const fileName = originalFilename
+    const filePath = fileName
+
+    console.log(`Uploading to Supabase Storage bucket "products" with path: ${filePath}`)
+
+    const { data, error } = await supabase.storage.from("products").upload(filePath, uint8Array, {
+      contentType: file.type || "image/webp",
+      upsert: true,
+    })
+
+    if (error) {
+      console.error(`Supabase storage error for ${productCode}:`, error)
+      throw error
+    }
+
+    console.log(`Upload successful for ${productCode}:`, data)
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("products").getPublicUrl(filePath)
+
+    console.log(`Generated public URL for ${productCode}: ${publicUrl}`)
+    return publicUrl
+  } catch (error) {
+    console.error(`Error uploading image for ${productCode}:`, error)
+    return null
+  }
+}
+
+// Upload products to Supabase
+export async function uploadProductsToSupabase(
+  products: Product[],
+  images?: Map<string, Blob>,
+  onProgress?: (progress: number) => void,
+): Promise<BulkUploadResult> {
+  const isSupabaseConnected = await checkSupabaseConnection()
+
+  if (!isSupabaseConnected) {
+    // Fallback to memory storage
+    memoryProducts = [...memoryProducts, ...products]
+    return {
+      success: true,
+      message: `${products.length} productos guardados en memoria (Supabase no disponible)`,
+      totalProducts: products.length,
+      successfulProducts: products.length,
+      failedProducts: 0,
+      errors: [],
+    }
+  }
+
+  let success = 0
+  let failed = 0
+  const errors: string[] = []
+
+  console.log(`Starting upload of ${products.length} products`) // Debug log
+  if (images) {
+    console.log(`Available images: ${images.size}`) // Debug log
+    console.log("Image keys:", Array.from(images.keys())) // Debug log
+  }
+
+  for (let i = 0; i < products.length; i++) {
+    try {
+      const product = products[i]
+      console.log(`Processing product ${i + 1}/${products.length}:`, product.codigo_brk) // Debug log
+
+      // Validate required fields - SKU should be unique, not codigo_brk
+      if (!product.sku || typeof product.sku !== "string" || product.sku.trim() === "") {
+        throw new Error(`Falta campo requerido: sku (valor: "${product.sku}")`)
+      }
+
+      // codigo_brk can be repeated, but should exist
+      if (!product.codigo_brk || typeof product.codigo_brk !== "string" || product.codigo_brk.trim() === "") {
+        throw new Error(`Falta campo requerido: codigo_brk (valor: "${product.codigo_brk}")`)
+      }
+
+      // Upload image if available
+      if (images && product.ref_brk) {
+        const productCode = String(product.ref_brk).trim()
+        console.log(`Looking for image for product code: ${productCode}`) // Debug log
+
+        // Try multiple matching strategies
+        let imageKey = Array.from(images.keys()).find((key) => {
+          const keyLower = key.toLowerCase()
+          const codeLower = productCode.toLowerCase()
+          return (
+            keyLower.includes(codeLower) ||
+            keyLower.startsWith(codeLower) ||
+            keyLower === `${codeLower}.jpg` ||
+            keyLower === `${codeLower}.png`
+          )
+        })
+
+        // If not found, try without extension
+        if (!imageKey) {
+          const codeWithoutExtension = productCode.replace(/\.(jpg|jpeg|png|gif|webp)$/i, "")
+          imageKey = Array.from(images.keys()).find((key) => {
+            const keyWithoutExt = key.replace(/\.(jpg|jpeg|png|gif|webp)$/i, "")
+            return keyWithoutExt.toLowerCase() === codeWithoutExtension.toLowerCase()
+          })
+        }
+
+        if (imageKey) {
+          console.log(`Found matching image for ${productCode}: ${imageKey}`) // Debug log
+          const imageBlob = images.get(imageKey)
+          if (imageBlob) {
+            console.log(`Image blob size: ${imageBlob.size} bytes`) // Debug log
+            const imageUrl = await uploadImage(imageBlob, productCode, imageKey)
+            if (imageUrl) {
+              product.images = [imageUrl]
+              console.log(`Successfully uploaded image for ${productCode}: ${imageUrl}`) // Debug log
+            } else {
+              console.log(`Failed to upload image for ${productCode}`) // Debug log
+            }
+          }
+        } else {
+          console.log(`No matching image found for product code: ${productCode}`) // Debug log
+          console.log(`Available image keys:`, Array.from(images.keys())) // Debug log
+        }
+      }
+
+      // Check if product exists first (by SKU, not codigo_brk)
+      const { data: existingProduct, error: selectError } = await supabase
+        .from("products")
+        .select("id")
+        .eq("sku", product.sku)
+        .single()
+
+      if (selectError && selectError.code !== "PGRST116") {
+        // PGRST116 = no rows returned
+        console.error(`Error checking existing product ${product.codigo_brk}:`, selectError)
+        throw selectError
+      }
+
+      let uploadError: any = null
+
+      if (existingProduct) {
+        // Update existing product by SKU
+        console.log(`Updating existing product with SKU: ${product.sku}`) // Debug log
+        const { error: updateError } = await supabase.from("products").update(product).eq("sku", product.sku)
+        uploadError = updateError
+      } else {
+        // Insert new product
+        console.log(`Inserting new product with SKU: ${product.sku}`) // Debug log
+        const { error: insertError } = await supabase.from("products").insert([product])
+        uploadError = insertError
+      }
+
+      if (uploadError) {
+        console.error(`Upload error for product ${product.codigo_brk}:`, uploadError)
+        throw uploadError
+      }
+
+      success++
+      console.log(`Successfully processed product ${i + 1}: ${product.codigo_brk}`) // Debug log
+    } catch (error) {
+      failed++
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+      errors.push(`Row ${i + 1} (${products[i]?.codigo_brk || "unknown"}): ${errorMessage}`)
+      console.error(`Error uploading product ${i + 1}:`, error)
+    }
+
+    if (onProgress) {
+      onProgress(((i + 1) / products.length) * 100)
+    }
+  }
+
+  console.log(`Upload completed: ${success} successful, ${failed} failed`) // Debug log
+
+  // Save upload history
+  const uploadId = `upload_${Date.now()}`
+  const uploadRecord: UploadHistory = {
+    id: uploadId,
+    upload_id: uploadId,
+    filename: "bulk_upload.xlsx",
+    total_products: products.length,
+    successful_products: success,
+    failed_products: failed,
+    created_at: new Date().toISOString(),
+    status: failed === 0 ? "completed" : success === 0 ? "failed" : "partial",
+    has_images: images ? images.size > 0 : false,
+    errors: errors,
+  }
+
+  try {
+    await supabase.from("upload_history").insert([uploadRecord])
+  } catch (error) {
+    console.error("Error saving upload history:", error)
+    memoryUploadHistory.push(uploadRecord)
+  }
+
+  return {
+    success: success > 0,
+    message: `Carga completada: ${success} exitosos, ${failed} fallidos`,
+    totalProducts: products.length,
+    successfulProducts: success,
+    failedProducts: failed,
+    errors: errors,
+  }
+}
+
+// Simple upload without images
+export async function simpleUpload(
+  products: Product[],
+  onProgress?: (progress: number) => void,
+): Promise<BulkUploadResult> {
+  return uploadProductsToSupabase(products, undefined, onProgress)
+}
+
+// Get upload history
+export async function getUploadHistory(): Promise<UploadHistory[]> {
+  const isSupabaseConnected = await checkSupabaseConnection()
+
+  if (!isSupabaseConnected) {
+    return memoryUploadHistory
+  }
+
+  try {
+    const { data, error } = await supabase.from("upload_history").select("*").order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data || []
+  } catch (error) {
+    console.error("Error fetching upload history:", error)
+    return memoryUploadHistory
+  }
+}
+
+// Rollback upload
+export async function rollbackUpload(uploadId: string): Promise<boolean> {
+  const isSupabaseConnected = await checkSupabaseConnection()
+
+  if (!isSupabaseConnected) {
+    // For memory storage, we can't really rollback, so just clear
+    memoryProducts = []
+    return true
+  }
+
+  try {
+    // This is a simplified rollback - in a real scenario you'd need to track which records were added
+    const { error } = await supabase.from("upload_history").update({ status: "rolled_back" }).eq("upload_id", uploadId)
+
+    return !error
+  } catch (error) {
+    console.error("Error rolling back upload:", error)
+    return false
+  }
+}
+
+// Create sample template
+export function createSampleTemplate(): Product[] {
+  return [
+    {
+      name: "BRK Performance Pastillas Delanteras Civic Type R",
+      description: "Pastillas Delantera para BRK Performance Civic Type R 2020-2023",
+      sku: "BRK001BRKPERFORMANCECIVICTYPER",
+      category: "Pastillas",
+      vendor: "BRK",
+      price: 150.0,
+      stock: 25,
+      images: [],
+      subgrupo: "Pastillas",
+      codigo_brk: "BRK001",
+      ref_brk: "BRK001",
+      posicion: "Delantera",
+      ref_fmsi_oem: "OEM 45022-TEA-T01",
+      marca: "BRK Performance",
+      linea: "Civic",
+      modelo: "Type R",
+      version: "2020-2023",
+      largo_mm: 150.5,
+      ancho_mm: 65.2,
+      espesor_mm: 17.8,
+      specifications: {},
+    },
+    {
+      name: "BRK Performance Pastillas Traseras Civic Type R",
+      description: "Pastillas Trasera para BRK Performance Civic Type R 2020-2023",
+      sku: "BRK002BRKPERFORMANCECIVICTYPER",
+      category: "Pastillas",
+      vendor: "BRK",
+      price: 120.0,
+      stock: 30,
+      images: [],
+      subgrupo: "Pastillas",
+      codigo_brk: "BRK002",
+      ref_brk: "BRK002",
+      posicion: "Trasera",
+      ref_fmsi_oem: "OEM 43022-TEA-T01",
+      marca: "BRK Performance",
+      linea: "Civic",
+      modelo: "Type R",
+      version: "2020-2023",
+      largo_mm: 120.3,
+      ancho_mm: 55.1,
+      espesor_mm: 15.2,
+      specifications: {},
+    },
+  ]
+}
+
+// Get products count for dashboard
+export async function getProductsCount(): Promise<number> {
+  const isSupabaseConnected = await checkSupabaseConnection()
+
+  if (!isSupabaseConnected) {
+    return memoryProducts.length
+  }
+
+  try {
+    const { count, error } = await supabase.from("products").select("*", { count: "exact", head: true })
+
+    if (error) throw error
+    return count || 0
+  } catch (error) {
+    return memoryProducts.length
+  }
+}
+
+// Get all products
+export async function getAllProducts(): Promise<Product[]> {
+  const isSupabaseConnected = await checkSupabaseConnection()
+
+  if (!isSupabaseConnected) {
+    return memoryProducts
+  }
+
+  try {
+    const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data || []
+  } catch (error) {
+    return memoryProducts
+  }
+}
