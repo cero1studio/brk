@@ -1,6 +1,12 @@
+"use client"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import ProductCard from "@/components/product/ProductCard"
-import ProductFilters from "@/components/product/ProductFilters"
+import ProductFilters, { LoadingProvider } from "@/components/product/ProductFilters"
 import SearchBar from "@/components/product/SearchBar"
+import ProductsPagination from "@/components/product/ProductsPagination"
+import ProductsLoading from "@/components/product/ProductsLoading"
+import ProductsLoadingOverlay from "@/components/product/ProductsLoadingOverlay"
 import { supabase } from "@/lib/supabase"
 import type { Product } from "@/types"
 
@@ -13,8 +19,14 @@ async function getProducts(searchParams?: {
   posicion?: string
   codigoBrk?: string
   refFmsiOem?: string
-}): Promise<Product[]> {
-  let query = supabase.from("products").select("*")
+  page?: string
+}): Promise<{ products: Product[]; totalCount: number }> {
+  const page = Number.parseInt(searchParams?.page || "1")
+  const itemsPerPage = 10
+  const from = (page - 1) * itemsPerPage
+  const to = from + itemsPerPage - 1
+
+  let query = supabase.from("products").select("*", { count: "exact" })
 
   if (searchParams?.q) {
     const searchTerm = searchParams.q.toLowerCase()
@@ -48,14 +60,14 @@ async function getProducts(searchParams?: {
     query = query.eq("ref_fmsi_oem", searchParams.refFmsiOem)
   }
 
-  const { data, error } = await query
+  const { data, error, count } = await query.range(from, to)
 
   if (error) {
     console.error("Error fetching products:", error)
-    return []
+    return { products: [], totalCount: 0 }
   }
 
-  return (data || []).map((item) => ({
+  const products = (data || []).map((item) => ({
     id: item.id,
     name: item.name || "",
     description: item.description || "",
@@ -104,65 +116,118 @@ async function getProducts(searchParams?: {
         ]
       : [],
   }))
+
+  return { products, totalCount: count || 0 }
 }
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams?: {
-    q?: string
-    subgrupo?: string
-    marca?: string
-    linea?: string
-    modelo?: string
-    posicion?: string
-    codigoBrk?: string
-    refFmsiOem?: string
+function HomePageContent() {
+  const searchParams = useSearchParams()
+  const [products, setProducts] = useState<Product[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isPageChanging, setIsPageChanging] = useState(false)
+
+  const searchParamsObj = {
+    q: searchParams.get("q") || undefined,
+    subgrupo: searchParams.get("subgrupo") || undefined,
+    marca: searchParams.get("marca") || undefined,
+    linea: searchParams.get("linea") || undefined,
+    modelo: searchParams.get("modelo") || undefined,
+    posicion: searchParams.get("posicion") || undefined,
+    codigoBrk: searchParams.get("codigoBrk") || undefined,
+    refFmsiOem: searchParams.get("refFmsiOem") || undefined,
+    page: searchParams.get("page") || undefined,
   }
-}) {
-  const products = await getProducts(searchParams)
-  const query = searchParams?.q
-  const hasFilters = Object.keys(searchParams || {}).some(
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoading(true)
+      const { products: newProducts, totalCount: newTotalCount } = await getProducts(searchParamsObj)
+      setProducts(newProducts)
+      setTotalCount(newTotalCount)
+      setIsLoading(false)
+      setIsPageChanging(false)
+    }
+
+    loadProducts()
+  }, [searchParams.toString()])
+
+  const query = searchParamsObj.q
+  const hasFilters = Object.keys(searchParamsObj).some(
     (key) =>
       key !== "q" &&
-      searchParams?.[key as keyof typeof searchParams] &&
-      !searchParams[key as keyof typeof searchParams]?.startsWith("all_"),
+      key !== "page" &&
+      searchParamsObj[key as keyof typeof searchParamsObj] &&
+      !searchParamsObj[key as keyof typeof searchParamsObj]?.startsWith("all_"),
   )
 
+  const currentPage = Number.parseInt(searchParamsObj.page || "1")
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+
+  const handlePageChange = (page: number) => {
+    setIsPageChanging(true)
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <section className="mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-headline font-bold mb-3 text-foreground">
-          Bienvenido a BRK Performance Brakes
-        </h1>
-        <p className="text-lg md:text-xl text-muted-foreground font-body">
-          Su proveedor principal de soluciones de frenado de alto rendimiento.
-        </p>
-      </section>
+    <LoadingProvider setIsLoading={setIsLoading}>
+      <div className="container mx-auto px-4 py-8">
+        {isPageChanging && <ProductsLoadingOverlay />}
 
-      <section className="mb-10 space-y-6">
-        <SearchBar />
-        <ProductFilters />
-      </section>
+        <section className="mb-12 text-center">
+          <h1 className="text-4xl md:text-5xl font-headline font-bold mb-3 text-foreground">
+            Bienvenido a BRK Performance Brakes
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground font-body">
+            Su proveedor principal de soluciones de frenado de alto rendimiento.
+          </p>
+        </section>
 
-      <section>
-        <h2 className="text-3xl font-headline font-semibold mb-8 text-center md:text-left text-foreground">
-          {query || hasFilters ? "Resultados de Búsqueda" : "Catálogo de Productos"}
-        </h2>
-        {products.length > 0 ? (
-          <div className="space-y-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        <section className="mb-10 space-y-6">
+          <SearchBar />
+          <ProductFilters />
+        </section>
+
+        <section id="results-section">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-headline font-semibold text-center md:text-left text-foreground">
+              {query || hasFilters ? "Resultados de Búsqueda" : "Catálogo de Productos"}
+            </h2>
+            {totalCount > 0 && !isLoading && (
+              <p className="text-sm text-muted-foreground">
+                {totalCount} producto{totalCount !== 1 ? "s" : ""} encontrado{totalCount !== 1 ? "s" : ""}
+              </p>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-xl text-muted-foreground">
-              No se encontraron productos que coincidan con sus criterios.
-            </p>
-          </div>
-        )}
-      </section>
-    </div>
+
+          {isLoading ? (
+            <ProductsLoading />
+          ) : products.length > 0 ? (
+            <>
+              <div className="space-y-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              <ProductsPagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-xl text-muted-foreground">
+                No se encontraron productos que coincidan con sus criterios.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+    </LoadingProvider>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<ProductsLoading />}>
+      <HomePageContent />
+    </Suspense>
   )
 }
