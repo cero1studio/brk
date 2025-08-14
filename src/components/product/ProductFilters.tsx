@@ -205,6 +205,8 @@ export default function ProductFilters() {
     }
 
     router.push(`/?${params.toString()}`)
+
+    loadFilterOptions(initialFilterState)
   }
 
   const filterFieldsRow1 = [
