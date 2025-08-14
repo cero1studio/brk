@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import ProductFilters from "@/components/product/ProductFilters"
+import AdminProductFilters from "@/components/product/AdminProductFilters"
+import ProductsPagination from "@/components/product/ProductsPagination"
 import {
   Dialog,
   DialogContent,
@@ -252,10 +253,14 @@ export default function AdminProductsPage() {
     }
   }
 
-  const handleFiltersChange = (newFilters: any) => {
-    setFilters(newFilters)
-    setCurrentPage(1)
-    fetchProducts()
+  const handleFiltersChange = (newFilters: { subgrupo: string; marca: string }) => {
+    const processedFilters = {
+      subgrupo: newFilters.subgrupo === "all_subgrupos" ? "" : newFilters.subgrupo,
+      marca: newFilters.marca === "all_marcas" ? "" : newFilters.marca,
+    }
+    setFilters(processedFilters)
+    setCurrentPage(1) // Reset to first page when filters change
+    // fetchProducts will be called by useEffect when filters change
   }
 
   const handlePageChange = (page: number) => {
@@ -412,7 +417,7 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     fetchProducts()
-  }, [])
+  }, [currentPage, filters])
 
   // const filteredProducts = products.filter(...)
 
@@ -1017,7 +1022,7 @@ export default function AdminProductsPage() {
         </CardHeader>
       </Card>
 
-      <ProductFilters onFiltersChange={handleFiltersChange} isLoading={loading} />
+      <AdminProductFilters onFiltersChange={handleFiltersChange} isLoading={loading} />
 
       <Card>
         <CardHeader>
@@ -1118,7 +1123,14 @@ export default function AdminProductsPage() {
                 </TableBody>
               </Table>
 
-              <div className="mt-6">{/* ProductsPagination component remains unchanged */}</div>
+              <div className="mt-6">
+                <ProductsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalProducts}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
             </>
           ) : (
             <div className="text-center py-8">
