@@ -145,18 +145,12 @@ export default function ProductDetailView({ product }: { product: Product }) {
               {/* Product Info */}
               <div className="p-6 md:p-8 flex flex-col">
                 <CardHeader className="p-0 mb-3">
-                  <CardTitle className="text-3xl md:text-4xl font-headline text-primary mb-1">{product.name}</CardTitle>
+                  <CardTitle className="text-3xl md:text-4xl font-headline text-white mb-1">{product.name}</CardTitle>
                   <CardDescription className="text-md text-muted-foreground">
                     Categoría: <span className="text-foreground/90">{product.category}</span> | Proveedor:{" "}
                     <span className="text-foreground/90">{product.vendor}</span>
                   </CardDescription>
                 </CardHeader>
-                <div className="mt-4 mb-6">
-                  <p className="text-3xl md:text-4xl font-semibold text-accent font-headline">
-                    ${product.price.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">SKU: {product.sku}</p>
-                </div>
 
                 <p className="font-body text-base text-foreground/90 mb-6 leading-relaxed">{product.description}</p>
 
