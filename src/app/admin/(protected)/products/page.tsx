@@ -84,9 +84,6 @@ export default function AdminProductsPage() {
   const [filters, setFilters] = useState({
     subgrupo: "",
     marca: "",
-    linea: "",
-    modelo: "",
-    posicion: "",
   })
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const { toast } = useToast()
@@ -228,21 +225,11 @@ export default function AdminProductsPage() {
         )
       }
 
-      // Aplicar filtros
       if (appliedFilters.subgrupo) {
         query = query.eq("subgrupo", appliedFilters.subgrupo)
       }
       if (appliedFilters.marca) {
         query = query.eq("marca", appliedFilters.marca)
-      }
-      if (appliedFilters.linea) {
-        query = query.eq("linea", appliedFilters.linea)
-      }
-      if (appliedFilters.modelo) {
-        query = query.eq("modelo", appliedFilters.modelo)
-      }
-      if (appliedFilters.posicion) {
-        query = query.eq("posicion", appliedFilters.posicion)
       }
 
       const { data, error, count } = await query
