@@ -1,6 +1,7 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import type React from "react"
+import { Loader2 } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
@@ -63,6 +64,7 @@ const productSchema = z.object({
   price: z.coerce.number().nullable().optional(),
   stock: z.coerce.number().nullable().optional(),
   description: z.string().nullable().optional(),
+  images: z.array(z.string()).optional(),
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
@@ -104,28 +106,92 @@ export default function AdminProductsPage() {
       price: 0,
       stock: 0,
       description: null,
+      images: [],
     },
   })
 
   // Add after the form setup
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>("")
+  const [imageUploading, setImageUploading] = useState(false)
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImageFile(file)
-      setImagePreview(reader.result as string)
+    // Validate file size and type
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "La imagen es demasiado grande (máx. 5MB)",
+        variant: "destructive",
+      })
+      return
     }
-    reader.readAsDataURL(file)
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Error",
+        description: "Solo se permiten archivos de imagen",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setImageUploading(true)
+
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+
+      // Generate unique filename
+      const timestamp = Date.now()
+      const fileName = `product_${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage.from("products").upload(fileName, file, {
+        contentType: file.type,
+        upsert: true,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("products").getPublicUrl(fileName)
+
+      setImageFile(file)
+
+      // Update form with the new image URL
+      form.setValue("images", [publicUrl])
+
+      toast({
+        title: "Imagen subida",
+        description: "La imagen se ha subido correctamente",
+      })
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo subir la imagen",
+        variant: "destructive",
+      })
+    } finally {
+      setImageUploading(false)
+    }
   }
 
   const removeImage = () => {
     setImageFile(null)
     setImagePreview("")
+    form.setValue("images", [])
   }
 
   const fetchProducts = async () => {
@@ -178,7 +244,6 @@ export default function AdminProductsPage() {
   const onSubmit = async (data: ProductFormValues) => {
     try {
       if (editingProduct) {
-        // Update existing product
         const { error } = await supabase.from("products").update(data).eq("id", editingProduct.id)
 
         if (error) {
@@ -195,7 +260,6 @@ export default function AdminProductsPage() {
           description: "El producto ha sido actualizado exitosamente",
         })
       } else {
-        // Create new product
         const { error } = await supabase.from("products").insert([data])
 
         if (error) {
@@ -216,6 +280,8 @@ export default function AdminProductsPage() {
       setIsModalOpen(false)
       setEditingProduct(null)
       form.reset()
+      setImageFile(null)
+      setImagePreview("")
       fetchProducts()
     } catch (error) {
       console.error("Error saving product:", error)
@@ -280,6 +346,7 @@ export default function AdminProductsPage() {
       price: 0,
       stock: 0,
       description: null,
+      images: [],
     })
     setIsModalOpen(true)
   }
@@ -846,6 +913,7 @@ export default function AdminProductsPage() {
                                 size="icon"
                                 className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={removeImage}
+                                disabled={imageUploading}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -860,12 +928,20 @@ export default function AdminProductsPage() {
                             className="hidden"
                             accept="image/*"
                             onChange={handleImageChange}
+                            disabled={imageUploading}
                           />
-                          <label htmlFor="image-upload" className="cursor-pointer">
+                          <label
+                            htmlFor="image-upload"
+                            className={`cursor-pointer ${imageUploading ? "opacity-50" : ""}`}
+                          >
                             <div className="flex flex-col items-center">
-                              <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                              {imageUploading ? (
+                                <Loader2 className="h-8 w-8 text-muted-foreground mb-2 animate-spin" />
+                              ) : (
+                                <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                              )}
                               <span className="text-sm font-medium">
-                                {imagePreview ? "Cambiar Imagen" : "Subir Imagen"}
+                                {imageUploading ? "Subiendo..." : imagePreview ? "Cambiar Imagen" : "Subir Imagen"}
                               </span>
                               <span className="text-xs text-muted-foreground">PNG, JPG, WEBP (máx. 5MB)</span>
                             </div>
