@@ -172,9 +172,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
           {product.aplicaciones && product.aplicaciones.length > 0 && (
             <Card className="shadow-xl">
               <CardHeader>
-                <CardTitle className="text-2xl font-headline text-primary">
-                  Referencia de Vehículos Compatibles
-                </CardTitle>
+                <CardTitle className="text-2xl font-headline text-white">Referencia de Vehículos Compatibles</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -211,7 +209,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
         <div className="lg:col-span-2">
           <Card className="shadow-xl sticky top-28">
             <CardHeader>
-              <CardTitle className="text-2xl font-headline text-primary">Especificaciones Detalladas</CardTitle>
+              <CardTitle className="text-2xl font-headline text-white">Especificaciones Detalladas</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
