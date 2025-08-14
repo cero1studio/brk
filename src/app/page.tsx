@@ -31,7 +31,7 @@ async function getProducts(searchParams?: {
   if (searchParams?.q) {
     const searchTerm = searchParams.q.toLowerCase()
     query = query.or(
-      `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,ref_fmsi_oem.ilike.%${searchTerm}%,equivalencias.ilike.%${searchTerm}%,marca.ilike.%${searchTerm}%,linea.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`,
+      `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,ref_fmsi_oem.ilike.%${searchTerm}%,codigo_brk.ilike.%${searchTerm}%,marca.ilike.%${searchTerm}%,linea.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`,
     )
   }
 
