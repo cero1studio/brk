@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { ProductsPagination } from "@/components/product/ProductsPagination"
+import { ProductFilters } from "@/components/product/ProductFilters"
+import { ProductsLoadingOverlay } from "@/components/product/ProductsLoadingOverlay"
 import {
   Dialog,
   DialogContent,
@@ -75,6 +78,17 @@ export default function AdminProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [filters, setFilters] = useState({
+    subgrupo: "",
+    marca: "",
+    linea: "",
+    modelo: "",
+    posicion: "",
+  })
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const { toast } = useToast()
 
   const form = useForm<ProductFormValues>({
@@ -194,10 +208,44 @@ export default function AdminProductsPage() {
     form.setValue("images", [])
   }
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = 1, searchQuery = "", appliedFilters = filters) => {
     try {
-      setLoading(true)
-      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false })
+      setIsLoadingProducts(true)
+      const itemsPerPage = 10
+      const from = (page - 1) * itemsPerPage
+      const to = from + itemsPerPage - 1
+
+      let query = supabase
+        .from("products")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to)
+
+      // Aplicar búsqueda
+      if (searchQuery) {
+        query = query.or(
+          `name.ilike.%${searchQuery}%,codigo_brk.ilike.%${searchQuery}%,marca.ilike.%${searchQuery}%,linea.ilike.%${searchQuery}%,modelo.ilike.%${searchQuery}%`,
+        )
+      }
+
+      // Aplicar filtros
+      if (appliedFilters.subgrupo) {
+        query = query.eq("subgrupo", appliedFilters.subgrupo)
+      }
+      if (appliedFilters.marca) {
+        query = query.eq("marca", appliedFilters.marca)
+      }
+      if (appliedFilters.linea) {
+        query = query.eq("linea", appliedFilters.linea)
+      }
+      if (appliedFilters.modelo) {
+        query = query.eq("modelo", appliedFilters.modelo)
+      }
+      if (appliedFilters.posicion) {
+        query = query.eq("posicion", appliedFilters.posicion)
+      }
+
+      const { data, error, count } = await query
 
       if (error) {
         console.error("Error fetching products:", error)
@@ -205,11 +253,33 @@ export default function AdminProductsPage() {
       }
 
       setProducts(data || [])
+      setTotalProducts(count || 0)
+      setTotalPages(Math.ceil((count || 0) / itemsPerPage))
     } catch (error) {
       console.error("Error:", error)
     } finally {
+      setIsLoadingProducts(false)
       setLoading(false)
     }
+  }
+
+  const handleFiltersChange = (newFilters: any) => {
+    setFilters(newFilters)
+    setCurrentPage(1)
+    fetchProducts(1, searchTerm, newFilters)
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    fetchProducts(page, searchTerm, filters)
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleSearch = (query: string) => {
+    setSearchTerm(query)
+    setCurrentPage(1)
+    fetchProducts(1, query, filters)
   }
 
   const handleDeleteProduct = async (productId: string) => {
@@ -355,14 +425,7 @@ export default function AdminProductsPage() {
     fetchProducts()
   }, [])
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.codigo_brk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.marca?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.linea?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.modelo?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // const filteredProducts = products.filter(...)
 
   return (
     <div className="space-y-6">
@@ -373,8 +436,12 @@ export default function AdminProductsPage() {
             <CardDescription>Ver, añadir, editar o eliminar productos de tu catálogo.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchProducts} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <Button
+              variant="outline"
+              onClick={() => fetchProducts(currentPage, searchTerm, filters)}
+              disabled={loading || isLoadingProducts}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading || isLoadingProducts ? "animate-spin" : ""}`} />
               Actualizar
             </Button>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -965,6 +1032,8 @@ export default function AdminProductsPage() {
         </CardHeader>
       </Card>
 
+      <ProductFilters onFiltersChange={handleFiltersChange} isLoading={isLoadingProducts} />
+
       <Card>
         <CardHeader>
           <div className="relative">
@@ -973,99 +1042,114 @@ export default function AdminProductsPage() {
               placeholder="Buscar por código BRK, marca, línea, modelo..."
               className="pl-10 w-full md:w-1/2 lg:w-1/3 bg-input border-border focus:border-primary"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          <ProductsLoadingOverlay isLoading={isLoadingProducts} />
+
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
               <span>Cargando productos...</span>
             </div>
-          ) : filteredProducts.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px]">Imagen</TableHead>
-                  <TableHead>Código BRK</TableHead>
-                  <TableHead>Subgrupo</TableHead>
-                  <TableHead>Marca</TableHead>
-                  <TableHead>Línea</TableHead>
-                  <TableHead>Modelo</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id} className="hover:bg-muted/50">
-                    <TableCell>
-                      <Image
-                        src={product.images?.[0] || "/placeholder.svg?height=60&width=60&query=auto part"}
-                        alt={product.name || "Producto"}
-                        width={60}
-                        height={60}
-                        className="rounded-md object-cover aspect-square border border-border"
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono font-medium">{product.codigo_brk || "N/A"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{product.subgrupo || "N/A"}</Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">{product.marca || "N/A"}</TableCell>
-                    <TableCell>{product.linea || "N/A"}</TableCell>
-                    <TableCell>{product.modelo || "N/A"}</TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-primary hover:text-primary/80"
-                          title="Editar"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive/80"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Esto eliminará permanentemente el producto "
-                                {product.name}" de la base de datos.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteProduct(product.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+          ) : products.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">Imagen</TableHead>
+                    <TableHead>Código BRK</TableHead>
+                    <TableHead>Subgrupo</TableHead>
+                    <TableHead>Marca</TableHead>
+                    <TableHead>Línea</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <Image
+                          src={product.images?.[0] || "/placeholder.svg?height=60&width=60&query=auto part"}
+                          alt={product.name || "Producto"}
+                          width={60}
+                          height={60}
+                          className="rounded-md object-cover aspect-square border border-border"
+                        />
+                      </TableCell>
+                      <TableCell className="font-mono font-medium">{product.codigo_brk || "N/A"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{product.subgrupo || "N/A"}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{product.marca || "N/A"}</TableCell>
+                      <TableCell>{product.linea || "N/A"}</TableCell>
+                      <TableCell>{product.modelo || "N/A"}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-gray-600 hover:text-gray-800"
+                            title="Editar"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive/80"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción no se puede deshacer. Esto eliminará permanentemente el producto "
+                                  {product.name}" de la base de datos.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Eliminar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="mt-6">
+                <ProductsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalProducts}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            </>
           ) : (
             <div className="text-center py-8">
-              {searchTerm ? (
-                <p className="text-muted-foreground">No se encontraron productos que coincidan con "{searchTerm}".</p>
+              {searchTerm || Object.values(filters).some((f) => f) ? (
+                <p className="text-muted-foreground">
+                  No se encontraron productos que coincidan con los criterios de búsqueda.
+                </p>
               ) : (
                 <p className="text-muted-foreground">
                   No se encontraron productos. Empieza por añadir un nuevo producto o usar la carga masiva.
