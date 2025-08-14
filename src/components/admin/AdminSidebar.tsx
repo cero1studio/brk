@@ -1,4 +1,3 @@
-// Component implementation goes here
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -68,10 +67,10 @@ export default function AdminSidebar() {
         ))}
         <Button
           variant="ghost"
-          className="w-full justify-start text-base h-11 px-3 text-red-500 hover:bg-red-500/10 hover:text-red-400 group"
+          className="w-full justify-start text-base h-11 px-3 text-red-500 hover:bg-gray-800/10 hover:text-gray-300 group"
           onClick={handleLogout}
         >
-          <LogOut className="mr-3 h-5 w-5 text-red-500 group-hover:text-red-400" />
+          <LogOut className="mr-3 h-5 w-5 text-red-500 group-hover:text-gray-300" />
           Cerrar Sesión
         </Button>
       </div>
