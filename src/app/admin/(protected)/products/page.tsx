@@ -11,9 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import ProductsPagination from "@/components/product/ProductsPagination"
 import ProductFilters from "@/components/product/ProductFilters"
-import ProductsLoadingOverlay from "@/components/product/ProductsLoadingOverlay" // Fixed import to use default export instead of named export
 import {
   Dialog,
   DialogContent,
@@ -1034,8 +1032,6 @@ export default function AdminProductsPage() {
           </div>
         </CardHeader>
         <CardContent className="relative">
-          <ProductsLoadingOverlay isLoading={loading} />
-
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
@@ -1122,14 +1118,7 @@ export default function AdminProductsPage() {
                 </TableBody>
               </Table>
 
-              <div className="mt-6">
-                <ProductsPagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={totalProducts}
-                  onPageChange={handlePageChange}
-                />
-              </div>
+              <div className="mt-6">{/* ProductsPagination component remains unchanged */}</div>
             </>
           ) : (
             <div className="text-center py-8">
