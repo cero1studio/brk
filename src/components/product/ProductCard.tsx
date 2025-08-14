@@ -35,7 +35,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const parseVehicleSpec = (especificacionVehiculo: string) => {
     const parts = especificacionVehiculo.trim().split(" ")
     const marca = parts[0] || ""
-    const linea = parts.slice(1).join(" ") || ""
+    const linea = parts[1] || ""
     return { marca, linea }
   }
 
