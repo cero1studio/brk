@@ -3,8 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import type { Product } from "@/types"
 import { Card, CardContent } from "@/components/ui/card"
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-// Button is not used directly for navigation here anymore.
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface ProductCardProps {
   product: Product
@@ -18,6 +17,27 @@ export default function ProductCard({ product }: ProductCardProps) {
       .slice(0, 2)
       .join(" ")
       .replace(/[^a-z0-9\\s]/gi, "") || "vehicle part"
+
+  const getVisibleColumns = () => {
+    if (!product.aplicaciones || product.aplicaciones.length === 0) return []
+
+    const hasModelo = product.aplicaciones.some((app) => app.serie && app.serie.trim() !== "")
+    const hasAno = product.aplicaciones.some((app) => app.ano && app.ano.trim() !== "")
+    const hasPosicion = product.aplicaciones.some((app) => app.eje && app.eje.trim() !== "")
+
+    return {
+      hasModelo,
+      hasAno,
+      hasPosicion,
+    }
+  }
+
+  const parseVehicleSpec = (especificacionVehiculo: string) => {
+    const parts = especificacionVehiculo.trim().split(" ")
+    const marca = parts[0] || ""
+    const linea = parts.slice(1).join(" ") || ""
+    return { marca, linea }
+  }
 
   return (
     <Link
@@ -76,17 +96,65 @@ export default function ProductCard({ product }: ProductCardProps) {
               )}
             </div>
 
-            {/* Aplicaciones Section */}
             <div className="w-full md:w-3/6 flex-grow">
-              <span className="text-xs font-semibold text-muted-foreground mb-1 block">Aplicaciones</span>
+              <span className="text-xs font-semibold text-muted-foreground mb-2 block">Aplicaciones</span>
               {product.aplicaciones && product.aplicaciones.length > 0 ? (
-                <div className="space-y-1">
-                  {product.aplicaciones.map((app, index) => (
-                    <div key={index} className="text-sm text-foreground">
-                      {app.especificacionVehiculo} {app.ano}
+                (() => {
+                  const visibleColumns = getVisibleColumns()
+                  return (
+                    <div className="border border-border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="text-xs font-semibold text-muted-foreground h-8 px-2">
+                              Marca
+                            </TableHead>
+                            <TableHead className="text-xs font-semibold text-muted-foreground h-8 px-2">
+                              Línea
+                            </TableHead>
+                            {visibleColumns.hasModelo && (
+                              <TableHead className="text-xs font-semibold text-muted-foreground h-8 px-2">
+                                Modelo
+                              </TableHead>
+                            )}
+                            {visibleColumns.hasAno && (
+                              <TableHead className="text-xs font-semibold text-muted-foreground h-8 px-2">
+                                Año
+                              </TableHead>
+                            )}
+                            {visibleColumns.hasPosicion && (
+                              <TableHead className="text-xs font-semibold text-muted-foreground h-8 px-2">
+                                Posición
+                              </TableHead>
+                            )}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {product.aplicaciones.map((app, index) => {
+                            const { marca, linea } = parseVehicleSpec(app.especificacionVehiculo)
+                            return (
+                              <TableRow key={index} className="border-b border-border/50">
+                                <TableCell className="text-xs text-foreground py-2 px-2">{marca}</TableCell>
+                                <TableCell className="text-xs text-foreground py-2 px-2">{linea}</TableCell>
+                                {visibleColumns.hasModelo && (
+                                  <TableCell className="text-xs text-foreground py-2 px-2">
+                                    {app.serie || "—"}
+                                  </TableCell>
+                                )}
+                                {visibleColumns.hasAno && (
+                                  <TableCell className="text-xs text-foreground py-2 px-2">{app.ano || "—"}</TableCell>
+                                )}
+                                {visibleColumns.hasPosicion && (
+                                  <TableCell className="text-xs text-foreground py-2 px-2">{app.eje || "—"}</TableCell>
+                                )}
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
                     </div>
-                  ))}
-                </div>
+                  )
+                })()
               ) : (
                 <p className="text-sm text-muted-foreground italic mt-2">No hay aplicaciones disponibles.</p>
               )}
