@@ -13,7 +13,7 @@ import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import ProductsPagination from "@/components/product/ProductsPagination"
 import ProductFilters from "@/components/product/ProductFilters"
-import { ProductsLoadingOverlay } from "@/components/product/ProductsLoadingOverlay"
+import ProductsLoadingOverlay from "@/components/product/ProductsLoadingOverlay" // Fixed import to use default export instead of named export
 import {
   Dialog,
   DialogContent,
