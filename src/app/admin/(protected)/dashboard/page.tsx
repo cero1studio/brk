@@ -33,7 +33,7 @@ export default async function AdminDashboardPage() {
   const { totalProducts, totalCategories, totalMarcas } = await getDashboardStats()
 
   const stats = [
-    { title: "Productos Totales", value: totalProducts.toString(), icon: Package, color: "text-primary" },
+    { title: "Productos Totales", value: totalProducts.toString(), icon: Package, color: "text-gray-300" },
     { title: "Categorías", value: totalCategories.toString(), icon: FolderPlus, color: "text-sky-400" },
     { title: "Marcas", value: totalMarcas.toString(), icon: Tag, color: "text-amber-400" },
   ]
@@ -49,7 +49,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-headline text-primary">Panel de Administración BRK</CardTitle>
+          <CardTitle className="text-3xl font-headline text-white">Panel de Administración BRK</CardTitle>
           <CardDescription>
             ¡Bienvenido de nuevo! Aquí tienes un resumen de tu plataforma BRK Performance Brakes.
           </CardDescription>
@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-3">
         {stats.map((stat) => (
-          <Card key={stat.title} className="shadow-lg hover:shadow-primary/20 transition-shadow">
+          <Card key={stat.title} className="shadow-lg hover:shadow-gray-500/20 transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
               <stat.icon className={`h-5 w-5 ${stat.color}`} />
@@ -81,20 +81,20 @@ export default async function AdminDashboardPage() {
             <Button
               key={action.label}
               variant="outline"
-              className="justify-start p-6 text-left h-auto border-border hover:border-primary group bg-transparent"
+              className="justify-start p-6 text-left h-auto border-border hover:border-gray-600 group bg-transparent"
               asChild={!action.disabled}
               disabled={action.disabled}
             >
               {action.disabled ? (
                 <div className="flex flex-col items-start">
-                  <action.icon className="h-7 w-7 mb-2 text-muted-foreground group-hover:text-primary" />
+                  <action.icon className="h-7 w-7 mb-2 text-muted-foreground group-hover:text-gray-300" />
                   <span className="font-semibold text-base text-muted-foreground">{action.label}</span>
                   <span className="text-xs text-muted-foreground/70">(Próximamente)</span>
                 </div>
               ) : (
                 <Link href={action.href} className="flex flex-col items-start">
-                  <action.icon className="h-7 w-7 mb-2 text-muted-foreground group-hover:text-primary" />
-                  <span className="font-semibold text-base group-hover:text-primary">{action.label}</span>
+                  <action.icon className="h-7 w-7 mb-2 text-muted-foreground group-hover:text-gray-300" />
+                  <span className="font-semibold text-base group-hover:text-gray-300">{action.label}</span>
                 </Link>
               )}
             </Button>

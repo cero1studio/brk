@@ -56,7 +56,7 @@ export default function SearchBar() {
         onKeyPress={handleKeyPress}
         className="flex-1"
       />
-      <Button onClick={handleSearch} className="bg-red-600 hover:bg-gray-800 text-white px-6">
+      <Button onClick={handleSearch} className="bg-gray-800 hover:bg-gray-700 text-white px-6">
         <Search className="mr-2 h-4 w-4" />
         Buscar
       </Button>
