@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import { ProductsPagination } from "@/components/product/ProductsPagination"
-import { ProductFilters } from "@/components/product/ProductFilters"
+import ProductsPagination from "@/components/product/ProductsPagination"
+import ProductFilters from "@/components/product/ProductFilters"
 import { ProductsLoadingOverlay } from "@/components/product/ProductsLoadingOverlay"
 import {
   Dialog,
