@@ -38,6 +38,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const validUsername = process.env.NEXT_PUBLIC_ADMIN_USER || "adminbrk"
     const validPassword = process.env.NEXT_PUBLIC_ADMIN_PASS || "Brkadmin2025#"
 
+    console.log("Variables de entorno:", {
+      validUsername,
+      validPassword,
+      inputUsername: username,
+      inputPassword: password,
+      envUser: process.env.NEXT_PUBLIC_ADMIN_USER,
+      envPass: process.env.NEXT_PUBLIC_ADMIN_PASS,
+    })
+
     if (username === validUsername && password === validPassword) {
       setIsAuthenticated(true)
       try {
