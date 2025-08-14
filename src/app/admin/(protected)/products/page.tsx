@@ -80,12 +80,11 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [totalProducts, setTotalProducts] = useState(0)
+  const [totalProducts, setTotalCount] = useState(0)
   const [filters, setFilters] = useState({
     subgrupo: "",
     marca: "",
   })
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const { toast } = useToast()
 
   const form = useForm<ProductFormValues>({
@@ -205,13 +204,12 @@ export default function AdminProductsPage() {
     form.setValue("images", [])
   }
 
-  const fetchProducts = async (page = 1, searchQuery = "", appliedFilters = filters) => {
-    console.log("Fetching products with:", { page, searchQuery, appliedFilters })
-    setIsLoadingProducts(true)
-
+  const fetchProducts = async () => {
     try {
+      setLoading(true)
+
       const itemsPerPage = 10
-      const from = (page - 1) * itemsPerPage
+      const from = (currentPage - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
 
       let query = supabase
@@ -221,17 +219,17 @@ export default function AdminProductsPage() {
         .range(from, to)
 
       // Aplicar búsqueda
-      if (searchQuery) {
+      if (searchTerm) {
         query = query.or(
-          `name.ilike.%${searchQuery}%,codigo_brk.ilike.%${searchQuery}%,marca.ilike.%${searchQuery}%,linea.ilike.%${searchQuery}%,modelo.ilike.%${searchQuery}%`,
+          `name.ilike.%${searchTerm}%,codigo_brk.ilike.%${searchTerm}%,marca.ilike.%${searchTerm}%,linea.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`,
         )
       }
 
-      if (appliedFilters.subgrupo) {
-        query = query.eq("subgrupo", appliedFilters.subgrupo)
+      if (filters.subgrupo) {
+        query = query.eq("subgrupo", filters.subgrupo)
       }
-      if (appliedFilters.marca) {
-        query = query.eq("marca", appliedFilters.marca)
+      if (filters.marca) {
+        query = query.eq("marca", filters.marca)
       }
 
       console.log("Executing query...")
@@ -244,15 +242,14 @@ export default function AdminProductsPage() {
 
       console.log("Products fetched successfully:", { count, dataLength: data?.length })
       setProducts(data || [])
-      setTotalProducts(count || 0)
+      setTotalCount(count || 0)
       setTotalPages(Math.ceil((count || 0) / itemsPerPage))
     } catch (error) {
       console.error("Error fetching products:", error)
       setProducts([])
-      setTotalProducts(0)
-      setTotalPages(1)
+      setTotalCount(0)
+      setTotalPages(0)
     } finally {
-      setIsLoadingProducts(false)
       setLoading(false)
     }
   }
@@ -260,12 +257,12 @@ export default function AdminProductsPage() {
   const handleFiltersChange = (newFilters: any) => {
     setFilters(newFilters)
     setCurrentPage(1)
-    fetchProducts(1, searchTerm, newFilters)
+    fetchProducts()
   }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    fetchProducts(page, searchTerm, filters)
+    fetchProducts()
     // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -273,7 +270,7 @@ export default function AdminProductsPage() {
   const handleSearch = (query: string) => {
     setSearchTerm(query)
     setCurrentPage(1)
-    fetchProducts(1, query, filters)
+    fetchProducts()
   }
 
   const handleDeleteProduct = async (productId: string) => {
@@ -430,12 +427,8 @@ export default function AdminProductsPage() {
             <CardDescription>Ver, añadir, editar o eliminar productos de tu catálogo.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => fetchProducts(currentPage, searchTerm, filters)}
-              disabled={loading || isLoadingProducts}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading || isLoadingProducts ? "animate-spin" : ""}`} />
+            <Button variant="outline" onClick={fetchProducts} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Actualizar
             </Button>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1026,7 +1019,7 @@ export default function AdminProductsPage() {
         </CardHeader>
       </Card>
 
-      <ProductFilters onFiltersChange={handleFiltersChange} isLoading={isLoadingProducts} />
+      <ProductFilters onFiltersChange={handleFiltersChange} isLoading={loading} />
 
       <Card>
         <CardHeader>
@@ -1041,7 +1034,7 @@ export default function AdminProductsPage() {
           </div>
         </CardHeader>
         <CardContent className="relative">
-          <ProductsLoadingOverlay isLoading={isLoadingProducts} />
+          <ProductsLoadingOverlay isLoading={loading} />
 
           {loading ? (
             <div className="flex justify-center items-center py-8">
