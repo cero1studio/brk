@@ -207,6 +207,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async (page = 1, searchQuery = "", appliedFilters = filters) => {
     try {
+      console.log("Fetching products with:", { page, searchQuery, appliedFilters })
       setIsLoadingProducts(true)
       const itemsPerPage = 10
       const from = (page - 1) * itemsPerPage
@@ -232,18 +233,24 @@ export default function AdminProductsPage() {
         query = query.eq("marca", appliedFilters.marca)
       }
 
+      console.log("Executing query...")
       const { data, error, count } = await query
 
       if (error) {
         console.error("Error fetching products:", error)
+        setLoading(false)
+        setIsLoadingProducts(false)
         return
       }
 
+      console.log("Products fetched successfully:", { count, dataLength: data?.length })
       setProducts(data || [])
       setTotalProducts(count || 0)
       setTotalPages(Math.ceil((count || 0) / itemsPerPage))
     } catch (error) {
       console.error("Error:", error)
+      setLoading(false)
+      setIsLoadingProducts(false)
     } finally {
       setIsLoadingProducts(false)
       setLoading(false)
