@@ -206,9 +206,10 @@ export default function AdminProductsPage() {
   }
 
   const fetchProducts = async (page = 1, searchQuery = "", appliedFilters = filters) => {
+    console.log("Fetching products with:", { page, searchQuery, appliedFilters })
+    setIsLoadingProducts(true)
+
     try {
-      console.log("Fetching products with:", { page, searchQuery, appliedFilters })
-      setIsLoadingProducts(true)
       const itemsPerPage = 10
       const from = (page - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
@@ -237,10 +238,8 @@ export default function AdminProductsPage() {
       const { data, error, count } = await query
 
       if (error) {
-        console.error("Error fetching products:", error)
-        setLoading(false)
-        setIsLoadingProducts(false)
-        return
+        console.error("Supabase error:", error)
+        throw error
       }
 
       console.log("Products fetched successfully:", { count, dataLength: data?.length })
@@ -248,9 +247,10 @@ export default function AdminProductsPage() {
       setTotalProducts(count || 0)
       setTotalPages(Math.ceil((count || 0) / itemsPerPage))
     } catch (error) {
-      console.error("Error:", error)
-      setLoading(false)
-      setIsLoadingProducts(false)
+      console.error("Error fetching products:", error)
+      setProducts([])
+      setTotalProducts(0)
+      setTotalPages(1)
     } finally {
       setIsLoadingProducts(false)
       setLoading(false)
