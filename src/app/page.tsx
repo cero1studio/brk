@@ -57,64 +57,88 @@ async function getProducts(searchParams?: {
     query = query.eq("ref_fmsi_oem", searchParams.refFmsiOem)
   }
 
-  const { data, error, count } = await query.range(from, to)
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching products:", error)
     return { products: [], totalCount: 0 }
   }
 
-  const products = (data || []).map((item) => ({
-    id: item.id,
-    name: item.name || "",
-    description: item.description || "",
-    price: item.price || 0,
-    category: item.category || "",
-    vendor: item.vendor || "",
-    stock: item.stock || 0,
-    sku: item.sku || "",
-    images: item.images ? (Array.isArray(item.images) ? item.images : [item.images]) : [],
-    specifications: {
-      refFmsiOem: item.ref_fmsi_oem || "",
-      ref_brk: item.ref_brk || "",
-      largo_mm: item.largo_mm,
-      ancho_mm: item.ancho_mm,
-      espesor_mm: item.espesor_mm,
-      diametro_A_mm: item.diametro_a_mm,
-      alto_B_mm: item.alto_b_mm,
-      subgrupo: item.subgrupo,
-      marca: item.marca,
-      linea: item.linea,
-      modelo: item.modelo,
-      posicion: item.posicion,
-      codigoBrk: item.codigo_brk,
-      version: item.version,
-      xJuegoPastilla: item.x_juego_pastilla,
-      espesor_C_mm: item.espesor_c_mm,
-      espesor_min_mm: item.espesor_min_mm,
-      agujeros: item.agujeros,
-      diametro_interno_A_mm: item.diametro_interno_a_mm,
-      diametro_orificio_central_C_mm: item.diametro_orificio_central_c_mm,
-      altura_total_D_mm: item.altura_total_d_mm,
-      diametro_interno_maximo: item.diametro_interno_maximo,
-      equivalencias: item.equivalencias,
-    },
-    // Las aplicaciones se generan basadas en la marca, linea y modelo del producto
-    aplicaciones: item.marca
-      ? [
-          {
-            serie: item.modelo || "",
-            litros: item.version || "",
-            ano: "",
-            especificacionVehiculo: `${item.marca} ${item.linea || ""} ${item.modelo || ""}`.trim(),
-            eje: item.posicion || "",
-            isHighlighted: false,
-          },
-        ]
-      : [],
-  }))
+  const groupedProducts = new Map<string, any>()
+  ;(data || []).forEach((item) => {
+    const key = item.codigo_brk || item.id
 
-  return { products, totalCount: count || 0 }
+    if (groupedProducts.has(key)) {
+      // Merge applications for existing product
+      const existing = groupedProducts.get(key)
+      if (item.marca) {
+        existing.aplicaciones.push({
+          serie: item.modelo || "",
+          litros: item.version || "",
+          ano: "",
+          especificacionVehiculo: `${item.marca} ${item.linea || ""} ${item.modelo || ""}`.trim(),
+          eje: item.posicion || "",
+          isHighlighted: false,
+        })
+      }
+    } else {
+      // Create new product entry
+      groupedProducts.set(key, {
+        id: item.id,
+        name: item.name || "",
+        description: item.description || "",
+        price: item.price || 0,
+        category: item.category || "",
+        vendor: item.vendor || "",
+        stock: item.stock || 0,
+        sku: item.sku || "",
+        images: item.images ? (Array.isArray(item.images) ? item.images : [item.images]) : [],
+        specifications: {
+          refFmsiOem: item.ref_fmsi_oem || "",
+          ref_brk: item.ref_brk || "",
+          largo_mm: item.largo_mm,
+          ancho_mm: item.ancho_mm,
+          espesor_mm: item.espesor_mm,
+          diametro_A_mm: item.diametro_a_mm,
+          alto_B_mm: item.alto_b_mm,
+          subgrupo: item.subgrupo,
+          marca: item.marca,
+          linea: item.linea,
+          modelo: item.modelo,
+          posicion: item.posicion,
+          codigoBrk: item.codigo_brk,
+          version: item.version,
+          xJuegoPastilla: item.x_juego_pastilla,
+          espesor_C_mm: item.espesor_c_mm,
+          espesor_min_mm: item.espesor_min_mm,
+          agujeros: item.agujeros,
+          diametro_interno_A_mm: item.diametro_interno_a_mm,
+          diametro_orificio_central_C_mm: item.diametro_orificio_central_c_mm,
+          altura_total_D_mm: item.altura_total_d_mm,
+          diametro_interno_maximo: item.diametro_interno_maximo,
+          equivalencias: item.equivalencias,
+        },
+        aplicaciones: item.marca
+          ? [
+              {
+                serie: item.modelo || "",
+                litros: item.version || "",
+                ano: "",
+                especificacionVehiculo: `${item.marca} ${item.linea || ""} ${item.modelo || ""}`.trim(),
+                eje: item.posicion || "",
+                isHighlighted: false,
+              },
+            ]
+          : [],
+      })
+    }
+  })
+
+  const allProducts = Array.from(groupedProducts.values())
+  const totalCount = allProducts.length
+  const products = allProducts.slice(from, to)
+
+  return { products, totalCount }
 }
 
 function HomePageContent() {
