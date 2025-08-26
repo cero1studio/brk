@@ -185,17 +185,24 @@ export default function ProductDetailView({ product }: { product: Product }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {product.aplicaciones.map((app, index) => (
-                      <TableRow
-                        key={index}
-                        className={app.isHighlighted ? "bg-primary/20 hover:bg-primary/30" : "hover:bg-muted/50"}
-                      >
-                        <TableCell className="font-medium">{app.marca}</TableCell>
-                        <TableCell>{app.linea}</TableCell>
-                        <TableCell>{app.modelo}</TableCell>
-                        <TableCell>{app.posicion}</TableCell>
-                      </TableRow>
-                    ))}
+                    {product.aplicaciones.map((app, index) => {
+                      const vehicleInfo = app.especificacionVehiculo.split(" ")
+                      const marca = vehicleInfo[0] || ""
+                      const linea = vehicleInfo[1] || ""
+                      const modelo = vehicleInfo[2] || ""
+
+                      return (
+                        <TableRow
+                          key={index}
+                          className={app.isHighlighted ? "bg-primary/20 hover:bg-primary/30" : "hover:bg-muted/50"}
+                        >
+                          <TableCell className="font-medium">{marca}</TableCell>
+                          <TableCell>{linea}</TableCell>
+                          <TableCell>{modelo}</TableCell>
+                          <TableCell>{app.eje}</TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
