@@ -64,10 +64,10 @@ export default function ProductCard({ product }: ProductCardProps) {
 
             {/* Info Section (Ref, Equivalencias, Medidas) */}
             <div className="w-full md:w-2/6 flex-shrink-0 space-y-2 md:border-r md:border-border md:pr-4">
-              {product.codigo_brk && (
+              {product.specifications.codigoBrk && (
                 <div>
                   <span className="text-xs font-semibold text-muted-foreground">Ref.</span>
-                  <p className="text-sm text-foreground font-medium">{product.codigo_brk}</p>
+                  <p className="text-sm text-foreground font-medium">{product.specifications.codigoBrk}</p>
                 </div>
               )}
               {product.specifications.refFmsiOem && (
