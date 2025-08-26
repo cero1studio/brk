@@ -1,25 +1,31 @@
+import { BrkLogo } from "../BrkLogo"
+
 export default function BrkWatermark() {
   return (
-    <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="150" height="45">
-            <rect width="200" height="60" fill="transparent" />
-            <rect x="75" y="5" width="10" height="5" fill="#009246" />
-            <rect x="85" y="5" width="10" height="5" fill="#FFFFFF" />
-            <rect x="95" y="5" width="10" height="5" fill="#CE2B37" />
-            <text x="50%" y="38" fontFamily="Arial, sans-serif" fontSize="28" fontWeight="bold" fill="white" textAnchor="middle" letterSpacing="-1">BRK</text>
-            <text x="50%" y="52" fontFamily="Arial, sans-serif" fontSize="7" fill="white" textAnchor="middle" letterSpacing="0.5">PERFORMANCE BRAKES</text>
-          </svg>
-        `)}")`,
-        backgroundRepeat: "repeat",
-        backgroundSize: "300px 150px",
-        opacity: "0.08",
-        transform: "rotate(-15deg)",
-        transformOrigin: "center",
-        filter: "contrast(1.2)",
-      }}
-    />
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: 0.08,
+          transform: "rotate(-15deg)",
+          transformOrigin: "center",
+          filter: "contrast(1.2)",
+        }}
+      >
+        <div
+          className="grid grid-cols-6 gap-20 w-full h-full"
+          style={{
+            transform: "scale(1.5)",
+            transformOrigin: "center",
+          }}
+        >
+          {Array.from({ length: 48 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-center">
+              <BrkLogo className="w-32 h-auto" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
