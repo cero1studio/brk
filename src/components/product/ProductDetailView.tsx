@@ -214,7 +214,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                 <SpecItem label="Subgrupo" value={spec.subgrupo} />
-                <SpecItem label="Código BRK" value={spec.codigoBrk} />
+                <SpecItem label="Código BRK" value={spec.codigo_brk} />
                 <SpecItem label="Posición" value={spec.posicion} />
                 <SpecItem label="REF FMSI / OEM" value={spec.refFmsiOem} />
                 <SpecItem label="Marca" value={spec.marca} />
