@@ -178,11 +178,10 @@ export default function ProductDetailView({ product }: { product: Product }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Serie</TableHead>
-                      <TableHead>Litros</TableHead>
-                      <TableHead>Año</TableHead>
-                      <TableHead>Especificación Vehículo</TableHead>
-                      <TableHead>Eje</TableHead>
+                      <TableHead>Marca</TableHead>
+                      <TableHead>Línea</TableHead>
+                      <TableHead>Modelo</TableHead>
+                      <TableHead>Posición</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -191,11 +190,10 @@ export default function ProductDetailView({ product }: { product: Product }) {
                         key={index}
                         className={app.isHighlighted ? "bg-primary/20 hover:bg-primary/30" : "hover:bg-muted/50"}
                       >
-                        <TableCell className="font-medium">{app.serie}</TableCell>
-                        <TableCell>{app.litros || "N/A"}</TableCell>
-                        <TableCell>{app.ano || "N/A"}</TableCell>
-                        <TableCell>{app.especificacionVehiculo}</TableCell>
-                        <TableCell>{app.eje || "N/A"}</TableCell>
+                        <TableCell className="font-medium">{app.marca}</TableCell>
+                        <TableCell>{app.linea}</TableCell>
+                        <TableCell>{app.modelo}</TableCell>
+                        <TableCell>{app.posicion}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -234,7 +232,6 @@ export default function ProductDetailView({ product }: { product: Product }) {
                 <SpecItem label="Orificio Central (C) mm" value={spec.diametro_orificio_central_C_mm} />
                 <SpecItem label="Altura Total (D) mm" value={spec.altura_total_D_mm} />
                 <SpecItem label="Diámetro Interno Máximo" value={spec.diametro_interno_maximo} />
-                <SpecItem label="Equivalencias" value={spec.equivalencias} />
               </div>
             </CardContent>
           </Card>
