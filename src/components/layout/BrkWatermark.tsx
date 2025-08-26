@@ -14,10 +14,11 @@ export default function BrkWatermark() {
           </svg>
         `)}")`,
         backgroundRepeat: "repeat",
-        backgroundSize: "200px 100px",
-        opacity: "0.03",
+        backgroundSize: "300px 150px",
+        opacity: "0.08",
         transform: "rotate(-15deg)",
         transformOrigin: "center",
+        filter: "contrast(1.2)",
       }}
     />
   )
