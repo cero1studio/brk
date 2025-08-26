@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import {
   Pagination,
   PaginationContent,
@@ -20,6 +20,7 @@ interface ProductsPaginationProps {
 export default function ProductsPagination({ currentPage, totalPages, onPageChange }: ProductsPaginationProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return
@@ -40,7 +41,7 @@ export default function ProductsPagination({ currentPage, totalPages, onPageChan
     // Call optional callback for loading state
     onPageChange?.(page)
 
-    router.push(`/?${params.toString()}`)
+    router.push(`${pathname}?${params.toString()}`)
   }
 
   // Generate page numbers to show
