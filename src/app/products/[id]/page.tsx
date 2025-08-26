@@ -19,6 +19,15 @@ async function getProduct(id: string): Promise<Product | null> {
       return null
     }
 
+    const { data: relatedProducts, error: relatedError } = await supabase
+      .from("products")
+      .select("*")
+      .eq("codigo_brk", product.codigo_brk)
+
+    if (relatedError) {
+      console.error("❌ Error fetching related products:", relatedError)
+    }
+
     console.log("✅ Product found:", product.name)
 
     // Transform the database product to our Product type
@@ -56,20 +65,35 @@ async function getProduct(id: string): Promise<Product | null> {
         diametro_interno_maximo: product.diametro_interno_maximo,
         equivalencias: product.equivalencias,
       },
-      // Generate applications based on product's marca, modelo, version
       aplicaciones:
-        product.marca && product.modelo
-          ? [
-              {
-                serie: product.modelo || "",
-                litros: product.version || "",
+        relatedProducts && relatedProducts.length > 0
+          ? relatedProducts
+              .filter((p) => p.marca && p.modelo)
+              .map((p) => ({
+                serie: p.modelo || "",
+                litros: p.version || "",
                 ano: "",
-                especificacionVehiculo: `${product.marca} ${product.linea || ""} ${product.modelo || ""}`.trim(),
-                eje: product.posicion || "",
+                especificacionVehiculo: `${p.marca} ${p.linea || ""} ${p.modelo || ""}`.trim(),
+                eje: p.posicion || "",
                 isHighlighted: false,
-              },
-            ]
-          : [],
+              }))
+              .filter(
+                (app, index, self) =>
+                  index ===
+                  self.findIndex((a) => a.especificacionVehiculo === app.especificacionVehiculo && a.eje === app.eje),
+              )
+          : product.marca && product.modelo
+            ? [
+                {
+                  serie: product.modelo || "",
+                  litros: product.version || "",
+                  ano: "",
+                  especificacionVehiculo: `${product.marca} ${product.linea || ""} ${product.modelo || ""}`.trim(),
+                  eje: product.posicion || "",
+                  isHighlighted: false,
+                },
+              ]
+            : [],
     }
 
     return transformedProduct
