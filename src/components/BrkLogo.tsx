@@ -10,13 +10,13 @@ export function BrkLogo(props: SVGProps<SVGSVGElement>) {
       aria-label="Logo de BRK Performance Brakes"
       {...props}
     >
-      <rect width="200" height="60" fill="transparent" />
+      <rect className="text-black" width="200" height="60" fill="transparent" />
       {/* Italian Flag */}
       <rect x="75" y="5" width="10" height="5" fill="#009246" /> {/* Green */}
       <rect x="85" y="5" width="10" height="5" fill="#FFFFFF" /> {/* White */}
       <rect x="95" y="5" width="10" height="5" fill="#CE2B37" /> {/* Red */}
       {/* BRK Text */}
-      <text
+      <text className="text-black"
         x="50%"
         y="38"
         fontFamily="Arial, sans-serif"
