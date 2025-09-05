@@ -1,11 +1,35 @@
 "use client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { Trash2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+
+interface LoadingContextType {
+  setIsLoading: (loading: boolean) => void
+}
+
+import { createContext, useContext } from "react"
+const LoadingContext = createContext<LoadingContextType | null>(null)
+
+export const useLoading = () => {
+  const context = useContext(LoadingContext)
+  if (!context) {
+    return { setIsLoading: () => {} } // Fallback if context not available
+  }
+  return context
+}
+
+export const LoadingProvider = ({
+  children,
+  setIsLoading,
+}: { children: React.ReactNode; setIsLoading: (loading: boolean) => void }) => {
+  return <LoadingContext.Provider value={{ setIsLoading }}>{children}</LoadingContext.Provider>
+}
 
 interface FilterState {
   subgrupo: string
@@ -50,6 +74,7 @@ export default function ProductFilters() {
   })
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { setIsLoading } = useLoading()
 
   useEffect(() => {
     const currentFilters = {
@@ -110,10 +135,15 @@ export default function ProductFilters() {
       }
     } catch (error) {
       console.error("Error loading filter options:", error)
+    } finally {
+      // Hide loading after fetching options
+      setIsLoading(false)
     }
   }
 
   const handleFilterChange = (filterName: keyof FilterState, value: string) => {
+    setIsLoading(true)
+
     const newFilters = { ...filters, [filterName]: value }
 
     // Reset dependent filters when a parent filter changes
@@ -133,6 +163,8 @@ export default function ProductFilters() {
 
     const params = new URLSearchParams(searchParams.toString())
 
+    params.delete("page")
+
     // Update URL parameters
     Object.keys(newFilters).forEach((key) => {
       const filterKey = key as keyof FilterState
@@ -144,6 +176,11 @@ export default function ProductFilters() {
       }
     })
 
+    const resultsSection = document.getElementById("results-section")
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: "smooth" })
+    }
+
     router.push(`/?${params.toString()}`)
 
     // Reload filter options with new filters
@@ -151,6 +188,8 @@ export default function ProductFilters() {
   }
 
   const handleClearFilters = () => {
+    setIsLoading(true)
+
     setFilters(initialFilterState)
     const params = new URLSearchParams(searchParams.toString())
 
@@ -160,7 +199,14 @@ export default function ProductFilters() {
       params.set("q", query)
     }
 
+    const resultsSection = document.getElementById("results-section")
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: "smooth" })
+    }
+
     router.push(`/?${params.toString()}`)
+
+    loadFilterOptions(initialFilterState)
   }
 
   const filterFieldsRow1 = [

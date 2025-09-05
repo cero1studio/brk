@@ -6,11 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useLoading } from "./ProductFilters"
 
 export default function SearchBar() {
   const [query, setQuery] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { setIsLoading } = useLoading()
 
   useEffect(() => {
     const currentQuery = searchParams.get("q") || ""
@@ -18,12 +20,21 @@ export default function SearchBar() {
   }, [searchParams.get("q")])
 
   const handleSearch = () => {
+    setIsLoading(true)
+
     const params = new URLSearchParams(searchParams.toString())
+
+    params.delete("page")
 
     if (query.trim()) {
       params.set("q", query.trim())
     } else {
       params.delete("q")
+    }
+
+    const resultsSection = document.getElementById("results-section")
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: "smooth" })
     }
 
     router.push(`/?${params.toString()}`)
@@ -45,7 +56,7 @@ export default function SearchBar() {
         onKeyPress={handleKeyPress}
         className="flex-1"
       />
-      <Button onClick={handleSearch} className="bg-red-600 hover:bg-red-700 text-white px-6">
+      <Button onClick={handleSearch} className="bg-gray-800 hover:bg-gray-700 text-white px-6">
         <Search className="mr-2 h-4 w-4" />
         Buscar
       </Button>
