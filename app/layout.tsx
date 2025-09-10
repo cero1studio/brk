@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import "../src/app/globals.css"
+import "../app/globals.css"
 import { Inter, Space_Grotesk } from "next/font/google"
 import Header from "../src/components/layout/Header"
 import Footer from "../src/components/layout/Footer"
