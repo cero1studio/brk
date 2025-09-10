@@ -1,7 +1,7 @@
 "use client"
+import HomePage from "../src/app/page"
 
-import { ThemeProvider } from "../components/theme-provider"
-
-export default function SyntheticV0PageForDeployment() {
-  return <ThemeProvider />
+export default function RootPage() {
+  // Return the actual HomePage component from src/app
+  return <HomePage />
 }
