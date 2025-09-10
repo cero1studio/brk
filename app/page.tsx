@@ -1,7 +1,7 @@
 "use client"
 
-import  from "../src/components/ui/accordion"
+import { ThemeProvider } from "../components/theme-provider"
 
 export default function SyntheticV0PageForDeployment() {
-  return < />
+  return <ThemeProvider />
 }
