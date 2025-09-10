@@ -179,7 +179,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
                     <Button
                       variant="outline"
                       size="lg"
-                      className="w-full text-base border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent"
+                      className="w-full text-base border-accent text-accent hover:bg-accent hover:text-accent-foreground dark:bg-transparent light:bg-accent/10 light:border-accent/80 bg-transparent"
                       onClick={handleWhatsAppClick}
                     >
                       <Info className="mr-2 h-5 w-5" /> Solicitar Información

@@ -22,7 +22,7 @@ export default function Header() {
           <Button
             variant="outline"
             asChild
-            className="text-base border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+            className="text-base border-primary text-primary hover:bg-primary hover:text-primary-foreground dark:bg-transparent light:bg-primary/10 light:border-primary/80 bg-transparent"
           >
             <Link href="/admin">
               <UserCircle className="mr-2 h-5 w-5" /> Portal Admin
