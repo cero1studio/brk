@@ -67,7 +67,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               {(product.specifications.codigoBrk || product.specifications.ref_brk) && (
                 <div>
                   <span className="text-xs font-semibold text-muted-foreground">Código BRK</span>
-                  <p className="text-sm text-foreground font-medium">
+                  <p className="text-sm text-foreground font-medium dark:text-foreground">
                     {product.specifications.codigoBrk || product.specifications.ref_brk}
                   </p>
                 </div>
@@ -75,7 +75,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               {product.specifications.refFmsiOem && (
                 <div>
                   <span className="text-xs font-semibold text-muted-foreground">Equivalencias</span>
-                  <p className="text-sm text-foreground">{product.specifications.refFmsiOem}</p>
+                  <p className="text-sm text-foreground dark:text-foreground">{product.specifications.refFmsiOem}</p>
                 </div>
               )}
               {(product.specifications.largo_mm ||
@@ -85,7 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 product.specifications.alto_B_mm) && (
                 <div>
                   <span className="text-xs font-semibold text-muted-foreground">Medidas</span>
-                  <ul className="text-sm text-foreground list-none pl-0">
+                  <ul className="text-sm text-foreground dark:text-foreground list-none pl-0">
                     {product.specifications.largo_mm && <li>Largo: {product.specifications.largo_mm}mm</li>}
                     {product.specifications.ancho_mm && <li>Ancho: {product.specifications.ancho_mm}mm</li>}
                     {product.specifications.espesor_mm && <li>Espesor: {product.specifications.espesor_mm}mm</li>}

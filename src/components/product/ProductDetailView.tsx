@@ -62,6 +62,22 @@ export default function ProductDetailView({ product }: { product: Product }) {
     setCurrentIndex(index)
   }
 
+  const handleWhatsAppClick = () => {
+    const message = `Hola! Me interesa obtener más información sobre el producto:
+  
+*${product.name}*
+- Código BRK: ${spec.codigoBrk || "N/A"}
+- Categoría: ${product.category}
+- REF FMSI/OEM: ${spec.refFmsiOem || "N/A"}
+- Aplicaciones: ${product.aplicaciones?.map((app) => app.especificacionVehiculo).join(", ") || "N/A"}
+
+¿Podrían proporcionarme más detalles sobre disponibilidad y precio?`
+
+    const encodedMessage = encodeURIComponent(message)
+    const whatsappUrl = `https://wa.me/573001234567?text=${encodedMessage}`
+    window.open(whatsappUrl, "_blank")
+  }
+
   return (
     <div className="container mx-auto px-4 py-10">
       <Button
@@ -145,14 +161,18 @@ export default function ProductDetailView({ product }: { product: Product }) {
               {/* Product Info */}
               <div className="p-6 md:p-8 flex flex-col">
                 <CardHeader className="p-0 mb-3">
-                  <CardTitle className="text-3xl md:text-4xl font-headline text-white mb-1">{product.name}</CardTitle>
+                  <CardTitle className="text-3xl md:text-4xl font-headline text-foreground dark:text-white mb-1">
+                    {product.name}
+                  </CardTitle>
                   <CardDescription className="text-md text-muted-foreground">
-                    Categoría: <span className="text-foreground/90">{product.category}</span> | Proveedor:{" "}
-                    <span className="text-foreground/90">{product.vendor}</span>
+                    Categoría: <span className="text-foreground/90 dark:text-foreground/90">{product.category}</span> |
+                    Proveedor: <span className="text-foreground/90 dark:text-foreground/90">{product.vendor}</span>
                   </CardDescription>
                 </CardHeader>
 
-                <p className="font-body text-base text-foreground/90 mb-6 leading-relaxed">{product.description}</p>
+                <p className="font-body text-base text-foreground/90 dark:text-foreground/90 mb-6 leading-relaxed">
+                  {product.description}
+                </p>
 
                 <div className="mt-auto pt-8">
                   <div className="flex flex-col">
@@ -160,6 +180,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
                       variant="outline"
                       size="lg"
                       className="w-full text-base border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent"
+                      onClick={handleWhatsAppClick}
                     >
                       <Info className="mr-2 h-5 w-5" /> Solicitar Información
                     </Button>
@@ -172,7 +193,9 @@ export default function ProductDetailView({ product }: { product: Product }) {
           {product.aplicaciones && product.aplicaciones.length > 0 && (
             <Card className="shadow-xl">
               <CardHeader>
-                <CardTitle className="text-2xl font-headline text-white">Referencia de Vehículos Compatibles</CardTitle>
+                <CardTitle className="text-2xl font-headline text-foreground dark:text-white">
+                  Referencia de Vehículos Compatibles
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -214,7 +237,9 @@ export default function ProductDetailView({ product }: { product: Product }) {
         <div className="lg:col-span-2">
           <Card className="shadow-xl sticky top-28">
             <CardHeader>
-              <CardTitle className="text-2xl font-headline text-white">Especificaciones Detalladas</CardTitle>
+              <CardTitle className="text-2xl font-headline text-foreground dark:text-white">
+                Especificaciones Detalladas
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
