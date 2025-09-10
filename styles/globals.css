@@ -88,3 +88,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+header img {
+  width: auto !important;
+  height: auto !important;
+  max-height: 100% !important;
+  max-width: none !important;
+}
