@@ -13,6 +13,7 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-2 text-primary">
 
         </Link>
+        
       </div>
     </header>
   )
