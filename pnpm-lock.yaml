@@ -95,6 +95,9 @@ importers:
       '@supabase/supabase-js':
         specifier: latest
         version: 2.57.4
+      '@vercel/analytics':
+        specifier: ^1.0.0
+        version: 1.0.0(react@18.0.0)
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.5.0)
@@ -1976,6 +1979,11 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
+  '@vercel/analytics@1.0.0':
+    resolution: {integrity: sha512-RQmj7pv82JwGDHrnKeRc6TtSw2U7rWNubc2IH0ernTzWTj02yr9zvIYiYJeztsBzrJtWv7m8Nz6vxxb+cdEtJw==}
+    peerDependencies:
+      react: ^16.8||^17||^18
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -5968,6 +5976,10 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 22.0.0
+
+  '@vercel/analytics@1.0.0(react@18.0.0)':
+    dependencies:
+      react: 18.0.0
 
   abort-controller@3.0.0:
     dependencies:
