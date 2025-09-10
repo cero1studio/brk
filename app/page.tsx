@@ -1,7 +1,5 @@
-"use client"
-import HomePage from "../src/app/page"
+import { redirect } from "next/navigation"
 
 export default function RootPage() {
-  // Return the actual HomePage component from src/app
-  return <HomePage />
+  redirect("/src")
 }
