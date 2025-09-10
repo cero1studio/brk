@@ -1,5 +1,3 @@
-import { BrkLogo } from "../BrkLogo"
-
 export default function BrkWatermark() {
   return (
     <div className="fixed inset-0 pointer-events-none z-10 overflow-hidden">
@@ -21,7 +19,9 @@ export default function BrkWatermark() {
         >
           {Array.from({ length: 48 }).map((_, i) => (
             <div key={i} className="flex items-center justify-center">
-              <BrkLogo className="w-32 h-auto" style={{ filter: "grayscale(1) brightness(0.5)" }} />
+              <span className="text-4xl font-bold text-gray-400" style={{ filter: "grayscale(1) brightness(0.5)" }}>
+                BRK
+              </span>
             </div>
           ))}
         </div>
