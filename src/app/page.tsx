@@ -1,0 +1,254 @@
+"use client"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import ProductCard from "@/components/product/ProductCard"
+import ProductFilters, { LoadingProvider } from "@/components/product/ProductFilters"
+import SearchBar from "@/components/product/SearchBar"
+import ProductsPagination from "@/components/product/ProductsPagination"
+import ProductsLoading from "@/components/product/ProductsLoading"
+import ProductsLoadingOverlay from "@/components/product/ProductsLoadingOverlay"
+import { supabase } from "@/lib/supabase"
+import type { Product } from "@/types"
+
+async function getProducts(searchParams?: {
+  q?: string
+  subgrupo?: string
+  marca?: string
+  linea?: string
+  modelo?: string
+  posicion?: string
+  codigoBrk?: string
+  refFmsiOem?: string
+  page?: string
+}): Promise<{ products: Product[]; totalCount: number }> {
+  const page = Number.parseInt(searchParams?.page || "1")
+  const itemsPerPage = 10
+  const from = (page - 1) * itemsPerPage
+  const to = from + itemsPerPage - 1
+
+  let query = supabase.from("products").select("*", { count: "exact" })
+
+  if (searchParams?.q) {
+    const searchTerm = searchParams.q.toLowerCase()
+    query = query.or(
+      `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,ref_fmsi_oem.ilike.%${searchTerm}%,codigo_brk.ilike.%${searchTerm}%,marca.ilike.%${searchTerm}%,linea.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`,
+    )
+  }
+
+  if (searchParams?.subgrupo && searchParams.subgrupo !== "all_subgrupos") {
+    query = query.eq("subgrupo", searchParams.subgrupo)
+  }
+  if (searchParams?.marca && searchParams.marca !== "all_marcas") {
+    query = query.eq("marca", searchParams.marca)
+  }
+  if (searchParams?.linea && searchParams.linea !== "all_lineas") {
+    query = query.eq("linea", searchParams.linea)
+  }
+  if (searchParams?.modelo && searchParams.modelo !== "all_modelos") {
+    query = query.eq("modelo", searchParams.modelo)
+  }
+  if (searchParams?.posicion && searchParams.posicion !== "all_posiciones") {
+    query = query.eq("posicion", searchParams.posicion)
+  }
+  if (searchParams?.codigoBrk && searchParams.codigoBrk !== "all_codigos_brk") {
+    query = query.eq("codigo_brk", searchParams.codigoBrk)
+  }
+  if (searchParams?.refFmsiOem && searchParams.refFmsiOem !== "all_refs_fmsi_oem") {
+    query = query.eq("ref_fmsi_oem", searchParams.refFmsiOem)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error("Error fetching products:", error)
+    return { products: [], totalCount: 0 }
+  }
+
+  const groupedProducts = new Map<string, any>()
+  ;(data || []).forEach((item) => {
+    const key = item.codigo_brk || item.id
+
+    if (groupedProducts.has(key)) {
+      // Merge applications for existing product
+      const existing = groupedProducts.get(key)
+      if (item.marca) {
+        existing.aplicaciones.push({
+          serie: item.modelo || "",
+          litros: item.version || "",
+          ano: "",
+          especificacionVehiculo: `${item.marca} ${item.linea || ""} ${item.modelo || ""}`.trim(),
+          eje: item.posicion || "",
+          isHighlighted: false,
+        })
+      }
+    } else {
+      // Create new product entry
+      groupedProducts.set(key, {
+        id: item.id,
+        name: item.name || "",
+        description: item.description || "",
+        price: item.price || 0,
+        category: item.category || "",
+        vendor: item.vendor || "",
+        stock: item.stock || 0,
+        sku: item.sku || "",
+        images: item.images ? (Array.isArray(item.images) ? item.images : [item.images]) : [],
+        specifications: {
+          refFmsiOem: item.ref_fmsi_oem || "",
+          ref_brk: item.ref_brk || "",
+          largo_mm: item.largo_mm,
+          ancho_mm: item.ancho_mm,
+          espesor_mm: item.espesor_mm,
+          diametro_A_mm: item.diametro_a_mm,
+          alto_B_mm: item.alto_b_mm,
+          subgrupo: item.subgrupo,
+          marca: item.marca,
+          linea: item.linea,
+          modelo: item.modelo,
+          posicion: item.posicion,
+          codigoBrk: item.codigo_brk,
+          version: item.version,
+          xJuegoPastilla: item.x_juego_pastilla,
+          espesor_C_mm: item.espesor_c_mm,
+          espesor_min_mm: item.espesor_min_mm,
+          agujeros: item.agujeros,
+          diametro_interno_A_mm: item.diametro_interno_a_mm,
+          diametro_orificio_central_C_mm: item.diametro_orificio_central_c_mm,
+          altura_total_D_mm: item.altura_total_d_mm,
+          diametro_interno_maximo: item.diametro_interno_maximo,
+          equivalencias: item.equivalencias,
+        },
+        aplicaciones: item.marca
+          ? [
+              {
+                serie: item.modelo || "",
+                litros: item.version || "",
+                ano: "",
+                especificacionVehiculo: `${item.marca} ${item.linea || ""} ${item.modelo || ""}`.trim(),
+                eje: item.posicion || "",
+                isHighlighted: false,
+              },
+            ]
+          : [],
+      })
+    }
+  })
+
+  const allProducts = Array.from(groupedProducts.values())
+  const totalCount = allProducts.length
+  const products = allProducts.slice(from, to)
+
+  return { products, totalCount }
+}
+
+function HomePageContent() {
+  const searchParams = useSearchParams()
+  const [products, setProducts] = useState<Product[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isPageChanging, setIsPageChanging] = useState(false)
+
+  const searchParamsObj = {
+    q: searchParams.get("q") || undefined,
+    subgrupo: searchParams.get("subgrupo") || undefined,
+    marca: searchParams.get("marca") || undefined,
+    linea: searchParams.get("linea") || undefined,
+    modelo: searchParams.get("modelo") || undefined,
+    posicion: searchParams.get("posicion") || undefined,
+    codigoBrk: searchParams.get("codigoBrk") || undefined,
+    refFmsiOem: searchParams.get("refFmsiOem") || undefined,
+    page: searchParams.get("page") || undefined,
+  }
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoading(true)
+      const { products: newProducts, totalCount: newTotalCount } = await getProducts(searchParamsObj)
+      setProducts(newProducts)
+      setTotalCount(newTotalCount)
+      setIsLoading(false)
+      setIsPageChanging(false)
+    }
+
+    loadProducts()
+  }, [searchParams.toString()])
+
+  const query = searchParamsObj.q
+  const hasFilters = Object.keys(searchParamsObj).some(
+    (key) =>
+      key !== "q" &&
+      key !== "page" &&
+      searchParamsObj[key as keyof typeof searchParamsObj] &&
+      !searchParamsObj[key as keyof typeof searchParamsObj]?.startsWith("all_"),
+  )
+
+  const currentPage = Number.parseInt(searchParamsObj.page || "1")
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+
+  const handlePageChange = (page: number) => {
+    setIsPageChanging(true)
+  }
+
+  return (
+    <LoadingProvider setIsLoading={setIsLoading}>
+      <div className="container mx-auto px-4 py-8">
+        {isPageChanging && <ProductsLoadingOverlay />}
+
+        <section className="mb-12 text-center">
+          <h1 className="text-4xl md:text-5xl font-headline font-bold mb-3 text-foreground">
+            Bienvenido a BRK Performance Brakes
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground font-body">
+            Su proveedor principal de soluciones de frenado de alto rendimiento.
+          </p>
+        </section>
+
+        <section className="mb-10 space-y-6">
+          <SearchBar />
+          <ProductFilters />
+        </section>
+
+        <section id="results-section">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-headline font-semibold text-center md:text-left text-foreground">
+              {query || hasFilters ? "Resultados de Búsqueda" : "Catálogo de Productos"}
+            </h2>
+            {totalCount > 0 && !isLoading && (
+              <p className="text-sm text-muted-foreground">
+                {totalCount} producto{totalCount !== 1 ? "s" : ""} encontrado{totalCount !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+
+          {isLoading ? (
+            <ProductsLoading />
+          ) : products.length > 0 ? (
+            <>
+              <div className="space-y-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              <ProductsPagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-xl text-muted-foreground">
+                No se encontraron productos que coincidan con sus criterios.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+    </LoadingProvider>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<ProductsLoading />}>
+      <HomePageContent />
+    </Suspense>
+  )
+}
