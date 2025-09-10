@@ -1,15 +1,30 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import "../src/app/globals.css"
+import { Inter, Space_Grotesk } from "next/font/google"
+import Header from "../src/components/layout/Header"
+import Footer from "../src/components/layout/Footer"
+import { Toaster } from "../src/components/ui/toaster"
+import { cn } from "../src/lib/utils"
+import { ThemeProvider } from "../src/contexts/ThemeContext"
+import BrkWatermark from "../src/components/layout/BrkWatermark"
 import { Analytics } from "@vercel/analytics/react"
 import { Suspense } from "react"
-import "./globals.css"
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+})
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+})
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "BRK Performance Brakes",
+  description: "Su proveedor principal de soluciones de frenado de alto rendimiento.",
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -18,18 +33,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <style>{`
-html {
-  font-family: ${GeistSans.style.fontFamily};
-  --font-sans: ${GeistSans.variable};
-  --font-mono: ${GeistMono.variable};
-}
-        `}</style>
-      </head>
-      <body>
-        <Suspense fallback={null}>{children}</Suspense>
+    <html lang="es" className={cn(inter.variable, spaceGrotesk.variable)}>
+      <body className="font-body antialiased flex flex-col min-h-screen">
+        <ThemeProvider>
+          <Suspense fallback={null}>
+            <BrkWatermark />
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+            <Toaster />
+          </Suspense>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
