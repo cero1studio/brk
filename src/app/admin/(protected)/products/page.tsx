@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button"
 import type React from "react"
 import { Loader2 } from "lucide-react"
+import { zodResolver } from "@hookform/resolvers/zod"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
@@ -86,6 +87,7 @@ export default function AdminProductsPage() {
   const { toast } = useToast()
 
   const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema), // Restored zodResolver
     defaultValues: {
       codigo_brk: "",
       name: "",
