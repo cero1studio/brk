@@ -341,7 +341,7 @@ export default function ProductFilters() {
         <div className="md:ml-auto md:pt-[21px]">
           <Button
             variant="outline"
-            className="w-full md:w-auto text-sm border-primary text-primary hover:bg-primary/10 hover:text-primary-foreground h-9 px-4 bg-transparent"
+            className="w-full md:w-auto text-sm border-green-500 text-green-500 hover:bg-green-500 hover:text-white h-9 px-4 bg-transparent"
             onClick={handleClearFilters}
           >
             <Trash2 className="mr-2 h-4 w-4" />
