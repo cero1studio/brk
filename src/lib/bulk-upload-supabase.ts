@@ -102,14 +102,29 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
           defval: "",
         })
 
-        console.log("Raw Excel data:", jsonData) // Debug log
+        console.log("[v0] PRODUCTION DEBUG - File name:", file.name)
+        console.log("[v0] PRODUCTION DEBUG - File size:", file.size)
+        console.log("[v0] PRODUCTION DEBUG - File type:", file.type)
+        console.log("[v0] PRODUCTION DEBUG - Raw Excel data length:", jsonData.length)
+
         if (jsonData.length > 0) {
-          console.log("Available headers:", Object.keys(jsonData[0]))
+          console.log("[v0] PRODUCTION DEBUG - First row raw:", jsonData[0])
+          console.log("[v0] PRODUCTION DEBUG - Available headers:", Object.keys(jsonData[0]))
+          console.log(
+            "[v0] PRODUCTION DEBUG - Headers with encoding info:",
+            Object.keys(jsonData[0]).map((h) => ({
+              header: h,
+              charCodes: Array.from(h).map((c) => c.charCodeAt(0)),
+              normalized: h.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+            })),
+          )
         }
 
         const products: Product[] = jsonData.map((row: any, index: number) => {
           const headers = Object.keys(row)
-          console.log(`Row ${index + 1} headers:`, headers)
+
+          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} all headers:`, headers)
+          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} raw row data:`, row)
 
           const codigoBrkHeader =
             headers.find(
@@ -124,8 +139,11 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
           const refBrkHeader =
             headers.find((h) => h === "REF BRK" || (h.includes("REF") && h.includes("BRK"))) || "REF BRK"
 
-          console.log(`Using headers - Codigo: "${codigoBrkHeader}", Ref: "${refBrkHeader}"`)
-          console.log(`Row ${index + 1} values - Codigo: "${row[codigoBrkHeader]}", Ref: "${row[refBrkHeader]}"`)
+          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} detected headers:`)
+          console.log(`  - Codigo header: "${codigoBrkHeader}" (exists: ${headers.includes(codigoBrkHeader)})`)
+          console.log(`  - Ref header: "${refBrkHeader}" (exists: ${headers.includes(refBrkHeader)})`)
+          console.log(`  - Codigo value: "${row[codigoBrkHeader]}" (type: ${typeof row[codigoBrkHeader]})`)
+          console.log(`  - Ref value: "${row[refBrkHeader]}" (type: ${typeof row[refBrkHeader]})`)
 
           // Extract main fields
           const subgrupo = String(row["SUBGRUPO"] || "")
@@ -138,12 +156,12 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
           const modelo = String(row["MODELO"] || "")
           const version = String(row["VERSIÓN"] || row["VERSION"] || "")
 
-          console.log(`Product ${index + 1} extracted values:`, {
-            codigo_brk,
-            ref_brk,
-            marca,
-            linea,
-            modelo,
+          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} final extracted values:`, {
+            codigo_brk: `"${codigo_brk}" (length: ${codigo_brk.length})`,
+            ref_brk: `"${ref_brk}" (length: ${ref_brk.length})`,
+            marca: `"${marca}"`,
+            linea: `"${linea}"`,
+            modelo: `"${modelo}"`,
           })
 
           // Generate SKU: codigo_brk + marca + linea + modelo
