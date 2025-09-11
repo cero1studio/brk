@@ -91,10 +91,16 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer)
-        const workbook = XLSX.read(data, { type: "array" })
+        const workbook = XLSX.read(data, {
+          type: "array",
+          codepage: 65001, // UTF-8 codepage
+        })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet)
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          raw: false,
+          defval: "",
+        })
 
         console.log("Raw Excel data:", jsonData) // Debug log
         if (jsonData.length > 0) {
@@ -105,10 +111,15 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
           const headers = Object.keys(row)
           console.log(`Row ${index + 1} headers:`, headers)
 
-          // Try multiple variations of CÓDIGOBRK header
           const codigoBrkHeader =
-            headers.find((h) => h === "CÓDIGOBRK" || h === "CODIGOBRK" || h.includes("CODIGO") || h.includes("BRK")) ||
-            "CÓDIGOBRK"
+            headers.find(
+              (h) =>
+                h === "CÓDIGOBRK" ||
+                h === "CODIGOBRK" ||
+                h.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "CODIGOBRK" ||
+                h.includes("CODIGO") ||
+                h.includes("BRK"),
+            ) || "CÓDIGOBRK"
 
           const refBrkHeader =
             headers.find((h) => h === "REF BRK" || (h.includes("REF") && h.includes("BRK"))) || "REF BRK"
@@ -120,12 +131,12 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
           const subgrupo = String(row["SUBGRUPO"] || "")
           const codigo_brk = String(row[codigoBrkHeader] || row[refBrkHeader] || "")
           const ref_brk = String(row[refBrkHeader] || "")
-          const posicion = String(row["POSICIÓN"] || "")
+          const posicion = String(row["POSICIÓN"] || row["POSICION"] || "")
           const ref_fmsi_oem = String(row["REF FMSI / OEM"] || "")
           const marca = String(row["MARCA"] || "")
-          const linea = String(row["LÍNEA"] || "")
+          const linea = String(row["LÍNEA"] || row["LINEA"] || "")
           const modelo = String(row["MODELO"] || "")
-          const version = String(row["VERSIÓN"] || "")
+          const version = String(row["VERSIÓN"] || row["VERSION"] || "")
 
           console.log(`Product ${index + 1} extracted values:`, {
             codigo_brk,
