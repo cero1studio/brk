@@ -355,7 +355,7 @@ export default function BulkUploadPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Progreso de carga</span>
-                    <span>{uploadProgress}%</span>
+                    <span>{uploadProgress.toFixed(2)}%</span>
                   </div>
                   <Progress value={uploadProgress} />
                 </div>
@@ -441,7 +441,7 @@ export default function BulkUploadPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Progreso de carga</span>
-                    <span>{uploadProgress}%</span>
+                    <span>{uploadProgress.toFixed(2)}%</span>
                   </div>
                   <Progress value={uploadProgress} />
                 </div>
