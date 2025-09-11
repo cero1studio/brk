@@ -123,7 +123,7 @@ export default function ProductFilters() {
 
       if (products) {
         const options: FilterOptions = {
-          subgrupos: [...new Set(products.map((p) => p.subgrupo).filter(Boolean))],
+          subgrupos: [...new Set(products.map((p) => p.subgrupo).filter((s) => s !== null && s !== undefined))],
           marcas: [...new Set(products.map((p) => p.marca).filter(Boolean))],
           lineas: [...new Set(products.map((p) => p.linea).filter(Boolean))],
           modelos: [...new Set(products.map((p) => p.modelo).filter(Boolean))],
