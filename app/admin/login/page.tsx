@@ -10,7 +10,7 @@ import { Label } from "../../../src/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../../src/components/ui/card"
 import { LogIn, Loader2, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { BrkLogo } from "../../components/BrkLogo"
+import { BrkLogo } from "../../../components/BrkLogo" // Fixed import path to point to correct BrkLogo location
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
