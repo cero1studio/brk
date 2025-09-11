@@ -10,6 +10,7 @@ import { Label } from "../../../src/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../../src/components/ui/card"
 import { LogIn, Loader2, AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import { BrkLogo } from "../components/BrkLogo"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -38,7 +39,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-fit">
             <Link href="/" className="flex items-center gap-2 text-primary">
-              <span className="text-3xl font-bold">BRK</span>
+              <BrkLogo className="h-12" />
             </Link>
           </div>
           <CardTitle className="text-3xl font-headline text-primary">Portal de Administración</CardTitle>
