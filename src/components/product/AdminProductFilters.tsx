@@ -51,7 +51,9 @@ export default function AdminProductFilters({ onFiltersChange }: AdminProductFil
 
       if (products) {
         const options: AdminFilterOptions = {
-          subgrupos: [...new Set(products.map((p) => p.subgrupo).filter((s) => s !== null && s !== undefined))],
+          subgrupos: [
+            ...new Set(products.map((p) => p.subgrupo || "").filter((s) => s !== null && s !== undefined)),
+          ].sort(),
           marcas: [...new Set(products.map((p) => p.marca).filter(Boolean))],
         }
         setFilterOptions(options)
