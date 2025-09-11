@@ -97,18 +97,43 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
         const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
         console.log("Raw Excel data:", jsonData) // Debug log
+        if (jsonData.length > 0) {
+          console.log("Available headers:", Object.keys(jsonData[0]))
+        }
 
         const products: Product[] = jsonData.map((row: any, index: number) => {
+          const headers = Object.keys(row)
+          console.log(`Row ${index + 1} headers:`, headers)
+
+          // Try multiple variations of CÓDIGOBRK header
+          const codigoBrkHeader =
+            headers.find((h) => h === "CÓDIGOBRK" || h === "CODIGOBRK" || h.includes("CODIGO") || h.includes("BRK")) ||
+            "CÓDIGOBRK"
+
+          const refBrkHeader =
+            headers.find((h) => h === "REF BRK" || (h.includes("REF") && h.includes("BRK"))) || "REF BRK"
+
+          console.log(`Using headers - Codigo: "${codigoBrkHeader}", Ref: "${refBrkHeader}"`)
+          console.log(`Row ${index + 1} values - Codigo: "${row[codigoBrkHeader]}", Ref: "${row[refBrkHeader]}"`)
+
           // Extract main fields
           const subgrupo = String(row["SUBGRUPO"] || "")
-          const codigo_brk = String(row["CÓDIGOBRK"] || row["REF BRK"] || "")
-          const ref_brk = String(row["REF BRK"] || "")
+          const codigo_brk = String(row[codigoBrkHeader] || row[refBrkHeader] || "")
+          const ref_brk = String(row[refBrkHeader] || "")
           const posicion = String(row["POSICIÓN"] || "")
           const ref_fmsi_oem = String(row["REF FMSI / OEM"] || "")
           const marca = String(row["MARCA"] || "")
           const linea = String(row["LÍNEA"] || "")
           const modelo = String(row["MODELO"] || "")
           const version = String(row["VERSIÓN"] || "")
+
+          console.log(`Product ${index + 1} extracted values:`, {
+            codigo_brk,
+            ref_brk,
+            marca,
+            linea,
+            modelo,
+          })
 
           // Generate SKU: codigo_brk + marca + linea + modelo
           const sku = `${codigo_brk}${marca}${linea}${modelo}`.replace(/\s+/g, "").toUpperCase()
