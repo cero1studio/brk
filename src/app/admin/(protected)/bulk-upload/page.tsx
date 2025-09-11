@@ -18,6 +18,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Upload, FileSpreadsheet, Archive, Download, AlertCircle, CheckCircle, Eye, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import XLSX from "xlsx"
 import {
   parseExcelFile,
   parseZipFile,
@@ -71,7 +72,7 @@ export default function BulkUploadPage() {
     if (!excelFile) {
       toast({
         title: "Error",
-        description: "Por favor selecciona un archivo Excel/CSV",
+        description: "Por favor selecciona un archivo Excel",
         variant: "destructive",
       })
       return
@@ -130,7 +131,7 @@ export default function BulkUploadPage() {
     if (!simpleExcelFile) {
       toast({
         title: "Error",
-        description: "Por favor selecciona un archivo Excel/CSV",
+        description: "Por favor selecciona un archivo Excel",
         variant: "destructive",
       })
       return
@@ -195,23 +196,22 @@ export default function BulkUploadPage() {
     }
   }
 
-  // Download template with ALL fields
   const downloadTemplate = () => {
     const template = createSampleTemplate()
 
-    // Convert to CSV format with ALL headers
-    const headers = Object.keys(template[0])
-    const csvContent = [
-      headers.join(","),
-      ...template.map((row) => headers.map((header) => `"${(row as any)[header]}"`).join(",")),
-    ].join("\n")
+    // Convert to Excel format using XLSX
+    const worksheet = XLSX.utils.json_to_sheet(template)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Productos")
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: "text/csv" })
+    // Generate Excel file
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+    const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "plantilla_productos_brk_completa.csv"
+    a.download = "plantilla_productos_brk_completa.xlsx"
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -219,7 +219,7 @@ export default function BulkUploadPage() {
 
     toast({
       title: "Plantilla descargada",
-      description: "La plantilla CSV completa con todos los campos se ha descargado exitosamente",
+      description: "La plantilla Excel completa con todos los campos se ha descargado exitosamente",
     })
   }
 
@@ -234,7 +234,7 @@ export default function BulkUploadPage() {
         </div>
         <Button onClick={downloadTemplate} variant="outline">
           <Download className="w-4 h-4 mr-2" />
-          Descargar Plantilla
+          Descargar Plantilla Excel
         </Button>
       </div>
 
@@ -267,7 +267,7 @@ export default function BulkUploadPage() {
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <FileSpreadsheet className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Archivo Excel/CSV</p>
+                      <p className="text-sm font-medium">Archivo Excel</p>
                       <p className="text-xs text-muted-foreground">
                         Debe contener TODOS los campos: SUBGRUPO, CÓDIGOBRK (requeridos) + todos los demás campos
                       </p>
@@ -485,12 +485,7 @@ export default function BulkUploadPage() {
               ) : uploadHistory.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No hay cargas registradas</p>
-                  <p className="text-sm mt-2">
-                    {/*tablesInitialized === false
-                      ? "El historial se almacenará en memoria hasta que se configuren las tablas de base de datos"
-                      : "Realiza tu primera carga masiva para ver el historial aquí"*/}
-                    Realiza tu primera carga masiva para ver el historial aquí
-                  </p>
+                  <p className="text-sm mt-2">Realiza tu primera carga masiva para ver el historial aquí</p>
                 </div>
               ) : (
                 <Table>
