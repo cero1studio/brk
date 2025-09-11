@@ -59,7 +59,6 @@ const productSchema = z.object({
   diametro_orificio_central_c_mm: z.coerce.string().nullable().optional(),
   altura_total_d_mm: z.coerce.string().nullable().optional(),
   diametro_interno_maximo: z.coerce.string().nullable().optional(),
-  equivalencias: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   stock: z.coerce.number().nullable().optional(),
   description: z.string().nullable().optional(),
@@ -107,7 +106,6 @@ export default function AdminProductsPage() {
       diametro_orificio_central_c_mm: null,
       altura_total_d_mm: null,
       diametro_interno_maximo: null,
-      equivalencias: null,
       price: 0,
       stock: 0,
       description: null,
@@ -412,7 +410,6 @@ export default function AdminProductsPage() {
       diametro_orificio_central_c_mm: null,
       altura_total_d_mm: null,
       diametro_interno_maximo: null,
-      equivalencias: null,
       price: 0,
       stock: 0,
       description: null,
@@ -665,15 +662,6 @@ export default function AdminProductsPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Equivalencias</label>
-                        <Input
-                          {...form.register("equivalencias")}
-                          placeholder="Ej: BOSCH 0986494123, FERODO FDB1234"
-                          className="bg-input border-border"
-                        />
-                      </div>
-
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Descripción</label>
                         <textarea
