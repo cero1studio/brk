@@ -18,7 +18,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Upload, FileSpreadsheet, Archive, Download, AlertCircle, CheckCircle, Eye, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import XLSX from "xlsx"
 import {
   parseExcelFile,
   parseZipFile,
@@ -196,31 +195,42 @@ export default function BulkUploadPage() {
     }
   }
 
-  const downloadTemplate = () => {
-    const template = createSampleTemplate()
+  const downloadTemplate = async () => {
+    try {
+      const XLSX = await import("xlsx")
+      const template = createSampleTemplate()
 
-    // Convert to Excel format using XLSX
-    const worksheet = XLSX.utils.json_to_sheet(template)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Productos")
+      // Convert to Excel format using XLSX
+      const worksheet = XLSX.utils.json_to_sheet(template)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Productos")
 
-    // Generate Excel file
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-    const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      // Generate Excel file
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
 
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "plantilla_productos_brk_completa.xlsx"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "plantilla_productos_brk_completa.xlsx"
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
 
-    toast({
-      title: "Plantilla descargada",
-      description: "La plantilla Excel completa con todos los campos se ha descargado exitosamente",
-    })
+      toast({
+        title: "Plantilla descargada",
+        description: "La plantilla Excel completa con todos los campos se ha descargado exitosamente",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error al generar la plantilla Excel",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
