@@ -1,5 +1,4 @@
 "use client"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useFieldArray } from "react-hook-form"
 import * as z from "zod"
 import { Button } from "../../../../../src/components/ui/button"
@@ -82,7 +81,6 @@ export default function NewProductPage() {
   const router = useRouter()
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -139,11 +137,20 @@ export default function NewProductPage() {
   }
 
   async function onSubmit(data: ProductFormValues) {
+    const validation = productSchema.safeParse(data)
+    if (!validation.success) {
+      validation.error.errors.forEach((error) => {
+        form.setError(error.path.join(".") as any, {
+          type: "manual",
+          message: error.message,
+        })
+      })
+      return
+    }
+
     // Simulate API call and form data creation
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // In a real app, you would handle file uploads to a storage service (like Firebase Storage)
-    // and then save the URLs to your database.
     const formData = new FormData()
     Object.entries(data).forEach(([key, value]) => {
       if (key === "images") {
