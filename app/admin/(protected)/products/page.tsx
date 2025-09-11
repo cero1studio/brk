@@ -22,8 +22,7 @@ import {
 } from "../../../../src/components/ui/dialog"
 import { Form } from "../../../../src/components/ui/form"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { z } from "zod"
 import { useToast } from "../../../../src/hooks/use-toast"
 import {
   AlertDialog,
@@ -85,7 +84,6 @@ export default function AdminProductsPage() {
   const { toast } = useToast()
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
     defaultValues: {
       codigo_brk: "",
       name: "",
@@ -117,7 +115,6 @@ export default function AdminProductsPage() {
     },
   })
 
-  // Add after the form setup
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>("")
   const [imageUploading, setImageUploading] = useState(false)
@@ -126,7 +123,6 @@ export default function AdminProductsPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file size and type
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Error",
@@ -148,18 +144,15 @@ export default function AdminProductsPage() {
     try {
       setImageUploading(true)
 
-      // Create preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
       }
       reader.readAsDataURL(file)
 
-      // Generate unique filename
       const timestamp = Date.now()
       const fileName = `product_${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`
 
-      // Upload to Supabase Storage
       const { data, error } = await supabase.storage.from("products").upload(fileName, file, {
         contentType: file.type,
         upsert: true,
@@ -169,14 +162,11 @@ export default function AdminProductsPage() {
         throw error
       }
 
-      // Get public URL
       const {
         data: { publicUrl },
       } = supabase.storage.from("products").getPublicUrl(fileName)
 
       setImageFile(file)
-
-      // Update form with the new image URL
       form.setValue("images", [publicUrl])
 
       toast({
@@ -215,7 +205,6 @@ export default function AdminProductsPage() {
         .order("created_at", { ascending: false })
         .range(from, to)
 
-      // Aplicar búsqueda
       if (searchTerm) {
         query = query.or(
           `name.ilike.%${searchTerm}%,codigo_brk.ilike.%${searchTerm}%,marca.ilike.%${searchTerm}%,linea.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`,
@@ -257,14 +246,13 @@ export default function AdminProductsPage() {
       marca: newFilters.marca === "all_marcas" ? "" : newFilters.marca,
     }
     setFilters(processedFilters)
-    setCurrentPage(1) // Reset to first page when filters change
-    // fetchProducts will be called by useEffect when filters change
+    setCurrentPage(1)
+    fetchProducts()
   }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     fetchProducts()
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -305,8 +293,18 @@ export default function AdminProductsPage() {
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
+      const validation = productSchema.safeParse(data)
+      if (!validation.success) {
+        toast({
+          title: "Error de validación",
+          description: "Por favor revisa los campos requeridos",
+          variant: "destructive",
+        })
+        return
+      }
+
       if (editingProduct) {
-        const { error } = await supabase.from("products").update(data).eq("id", editingProduct.id)
+        const { error } = await supabase.from("products").update(validation.data).eq("id", editingProduct.id)
 
         if (error) {
           toast({
@@ -322,7 +320,7 @@ export default function AdminProductsPage() {
           description: "El producto ha sido actualizado exitosamente",
         })
       } else {
-        const { error } = await supabase.from("products").insert([data])
+        const { error } = await supabase.from("products").insert([validation.data])
 
         if (error) {
           toast({
@@ -365,7 +363,6 @@ export default function AdminProductsPage() {
       stock: product.stock || 0,
     })
 
-    // Load existing image
     if (product.images && product.images[0]) {
       setImagePreview(product.images[0])
       setImageFile(null)
@@ -416,8 +413,6 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts()
   }, [currentPage, filters])
-
-  // const filteredProducts = products.filter(...)
 
   return (
     <div className="space-y-6">
