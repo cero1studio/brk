@@ -293,8 +293,11 @@ export default function AdminProductsPage() {
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
+      console.log("[v0] Form data received:", data)
+
       const validation = productSchema.safeParse(data)
       if (!validation.success) {
+        console.log("[v0] Validation failed:", validation.error)
         toast({
           title: "Error de validación",
           description: "Por favor revisa los campos requeridos",
@@ -303,34 +306,42 @@ export default function AdminProductsPage() {
         return
       }
 
+      console.log("[v0] Validation successful, data:", validation.data)
+
       if (editingProduct) {
+        console.log("[v0] Updating product with ID:", editingProduct.id)
         const { error } = await supabase.from("products").update(validation.data).eq("id", editingProduct.id)
 
         if (error) {
+          console.log("[v0] Update error:", error)
           toast({
             title: "Error",
-            description: "No se pudo actualizar el producto",
+            description: `No se pudo actualizar el producto: ${error.message}`,
             variant: "destructive",
           })
           return
         }
 
+        console.log("[v0] Product updated successfully")
         toast({
           title: "Producto actualizado",
           description: "El producto ha sido actualizado exitosamente",
         })
       } else {
+        console.log("[v0] Creating new product")
         const { error } = await supabase.from("products").insert([validation.data])
 
         if (error) {
+          console.log("[v0] Insert error:", error)
           toast({
             title: "Error",
-            description: "No se pudo crear el producto",
+            description: `No se pudo crear el producto: ${error.message}`,
             variant: "destructive",
           })
           return
         }
 
+        console.log("[v0] Product created successfully")
         toast({
           title: "Producto creado",
           description: "El producto ha sido creado exitosamente",
@@ -344,7 +355,7 @@ export default function AdminProductsPage() {
       setImagePreview("")
       fetchProducts()
     } catch (error) {
-      console.error("Error saving product:", error)
+      console.error("[v0] Error saving product:", error)
       toast({
         title: "Error",
         description: "Ocurrió un error al guardar el producto",
