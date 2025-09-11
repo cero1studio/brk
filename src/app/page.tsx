@@ -26,7 +26,7 @@ async function getProducts(searchParams?: {
   const from = (page - 1) * itemsPerPage
   const to = from + itemsPerPage - 1
 
-  let query = supabase.from("products").select("*", { count: "exact" }).limit(5000)
+  let query = supabase.from("products").select("*", { count: "exact" })
 
   if (searchParams?.q) {
     const searchTerm = searchParams.q.toLowerCase()
