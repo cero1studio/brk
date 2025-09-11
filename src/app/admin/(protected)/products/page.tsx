@@ -24,7 +24,6 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Textarea } from "@/components/ui/textarea"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -87,7 +86,6 @@ export default function AdminProductsPage() {
   const { toast } = useToast()
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
     defaultValues: {
       codigo_brk: "",
       name: "",
