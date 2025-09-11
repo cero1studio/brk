@@ -287,14 +287,22 @@ export async function uploadProductsToSupabase(
       const product = products[i]
       console.log(`Processing product ${i + 1}/${products.length}:`, product.codigo_brk) // Debug log
 
-      // Validate required fields - SKU should be unique, not codigo_brk
-      if (!product.sku || typeof product.sku !== "string" || product.sku.trim() === "") {
-        throw new Error(`Falta campo requerido: sku (valor: "${product.sku}")`)
-      }
-
-      // codigo_brk can be repeated, but should exist
       if (!product.codigo_brk || typeof product.codigo_brk !== "string" || product.codigo_brk.trim() === "") {
         throw new Error(`Falta campo requerido: codigo_brk (valor: "${product.codigo_brk}")`)
+      }
+
+      if (!product.sku || typeof product.sku !== "string" || product.sku.trim() === "") {
+        const codigo_brk = String(product.codigo_brk || "")
+        const marca = String(product.marca || "")
+        const linea = String(product.linea || "")
+        const modelo = String(product.modelo || "")
+
+        product.sku = `${codigo_brk}${marca}${linea}${modelo}`.replace(/\s+/g, "").toUpperCase()
+
+        // If still empty, use codigo_brk + timestamp as fallback
+        if (!product.sku || product.sku.trim() === "") {
+          product.sku = `${codigo_brk}_${Date.now()}`.replace(/\s+/g, "").toUpperCase()
+        }
       }
 
       // Upload image if available
