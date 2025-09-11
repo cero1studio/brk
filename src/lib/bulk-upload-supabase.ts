@@ -633,11 +633,7 @@ export async function getAllProducts(): Promise<Product[]> {
   }
 
   try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .limit(10000)
-      .order("created_at", { ascending: false })
+    const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false })
 
     if (error) throw error
     return data || []
