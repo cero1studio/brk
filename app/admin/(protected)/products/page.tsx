@@ -443,9 +443,274 @@ export default function AdminProductsPage() {
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* ... existing form fields ... */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Código BRK *</label>
+                        <Input
+                          {...form.register("codigo_brk")}
+                          placeholder="Ej: 32541"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Nombre del Producto *</label>
+                        <Input
+                          {...form.register("name")}
+                          placeholder="Ej: Pastillas de Freno"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Subgrupo</label>
+                        <Input
+                          {...form.register("subgrupo")}
+                          placeholder="Ej: PASTILLAS"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Posición</label>
+                        <Input
+                          {...form.register("posicion")}
+                          placeholder="Ej: DELANTERO"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Ref. FMSI/OEM</label>
+                        <Input
+                          {...form.register("ref_fmsi_oem")}
+                          placeholder="Ej: D1060"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Marca</label>
+                        <Input {...form.register("marca")} placeholder="Ej: AUDI" className="bg-input border-border" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Línea</label>
+                        <Input {...form.register("linea")} placeholder="Ej: A6" className="bg-input border-border" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Modelo</label>
+                        <Input {...form.register("modelo")} placeholder="Ej: 2019" className="bg-input border-border" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Versión</label>
+                        <Input
+                          {...form.register("version")}
+                          placeholder="Ej: 3.0 TDI"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Largo (mm)</label>
+                        <Input
+                          {...form.register("largo_mm")}
+                          placeholder="Ej: 156.4"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Ancho (mm)</label>
+                        <Input
+                          {...form.register("ancho_mm")}
+                          placeholder="Ej: 68.2"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Espesor (mm)</label>
+                        <Input
+                          {...form.register("espesor_mm")}
+                          placeholder="Ej: 20.3"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">X Juego Pastilla</label>
+                        <Input
+                          {...form.register("x_juego_pastilla", { valueAsNumber: true })}
+                          type="number"
+                          placeholder="Ej: 4"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Diámetro A (mm)</label>
+                        <Input
+                          {...form.register("diametro_a_mm")}
+                          placeholder="Ej: 280"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Alto B (mm)</label>
+                        <Input
+                          {...form.register("alto_b_mm")}
+                          placeholder="Ej: 25"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Espesor C (mm)</label>
+                        <Input
+                          {...form.register("espesor_c_mm")}
+                          placeholder="Ej: 12"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Espesor Mín. (mm)</label>
+                        <Input
+                          {...form.register("espesor_min_mm")}
+                          placeholder="Ej: 2"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Agujeros</label>
+                        <Input
+                          {...form.register("agujeros", { valueAsNumber: true })}
+                          type="number"
+                          placeholder="Ej: 5"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Diámetro Interno A (mm)</label>
+                        <Input
+                          {...form.register("diametro_interno_a_mm")}
+                          placeholder="Ej: 68"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Diámetro Orificio Central C (mm)</label>
+                        <Input
+                          {...form.register("diametro_orificio_central_c_mm")}
+                          placeholder="Ej: 65.1"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Altura Total D (mm)</label>
+                        <Input
+                          {...form.register("altura_total_d_mm")}
+                          placeholder="Ej: 42.5"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Diámetro Interno Máximo</label>
+                        <Input
+                          {...form.register("diametro_interno_maximo")}
+                          placeholder="Ej: 330"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Precio</label>
+                        <Input
+                          {...form.register("price", { valueAsNumber: true })}
+                          type="number"
+                          step="0.01"
+                          placeholder="Ej: 45000"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Stock</label>
+                        <Input
+                          {...form.register("stock", { valueAsNumber: true })}
+                          type="number"
+                          placeholder="Ej: 10"
+                          className="bg-input border-border"
+                        />
+                      </div>
                     </div>
-                    {/* ... existing form content ... */}
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Equivalencias</label>
+                        <Input
+                          {...form.register("equivalencias")}
+                          placeholder="Ej: BOSCH 0986494123, FERODO FDB1234"
+                          className="bg-input border-border"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Descripción</label>
+                        <textarea
+                          {...form.register("description")}
+                          placeholder="Descripción detallada del producto..."
+                          className="w-full min-h-[100px] px-3 py-2 bg-input border border-border rounded-md resize-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Imagen del Producto</label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            id="image-upload"
+                          />
+                          <label
+                            htmlFor="image-upload"
+                            className="cursor-pointer bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-md border border-border"
+                          >
+                            {imageUploading ? "Subiendo..." : "Seleccionar Imagen"}
+                          </label>
+                          {imagePreview && (
+                            <div className="relative">
+                              <Image
+                                src={imagePreview || "/placeholder.svg"}
+                                alt="Preview"
+                                width={80}
+                                height={80}
+                                className="rounded-md object-cover border border-border"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                onClick={removeImage}
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                         Cancelar
