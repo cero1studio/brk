@@ -94,75 +94,104 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
         const workbook = XLSX.read(data, {
           type: "array",
           codepage: 65001, // UTF-8 codepage
+          cellText: false,
+          cellDates: true,
         })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
         const jsonData = XLSX.utils.sheet_to_json(worksheet, {
           raw: false,
           defval: "",
+          blankrows: false,
         })
 
-        console.log("[v0] PRODUCTION DEBUG - File name:", file.name)
-        console.log("[v0] PRODUCTION DEBUG - File size:", file.size)
-        console.log("[v0] PRODUCTION DEBUG - File type:", file.type)
-        console.log("[v0] PRODUCTION DEBUG - Raw Excel data length:", jsonData.length)
-
-        if (jsonData.length > 0) {
-          console.log("[v0] PRODUCTION DEBUG - First row raw:", jsonData[0])
-          console.log("[v0] PRODUCTION DEBUG - Available headers:", Object.keys(jsonData[0]))
-          console.log(
-            "[v0] PRODUCTION DEBUG - Headers with encoding info:",
-            Object.keys(jsonData[0]).map((h) => ({
-              header: h,
-              charCodes: Array.from(h).map((c) => c.charCodeAt(0)),
-              normalized: h.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-            })),
-          )
+        const normalizeHeader = (header: string): string => {
+          return header
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Remove accents
+            .replace(/\s+/g, "") // Remove spaces
+            .toUpperCase()
         }
 
-        const products: Product[] = jsonData.map((row: any, index: number) => {
-          const headers = Object.keys(row)
+        const createHeaderMap = (headers: string[]) => {
+          const headerMap = new Map<string, string>()
 
-          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} all headers:`, headers)
-          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} raw row data:`, row)
+          headers.forEach((header) => {
+            const normalized = normalizeHeader(header)
 
-          const codigoBrkHeader =
-            headers.find(
-              (h) =>
-                h === "CÓDIGOBRK" ||
-                h === "CODIGOBRK" ||
-                h.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "CODIGOBRK" ||
-                h.includes("CODIGO") ||
-                h.includes("BRK"),
-            ) || "CÓDIGOBRK"
-
-          const refBrkHeader =
-            headers.find((h) => h === "REF BRK" || (h.includes("REF") && h.includes("BRK"))) || "REF BRK"
-
-          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} detected headers:`)
-          console.log(`  - Codigo header: "${codigoBrkHeader}" (exists: ${headers.includes(codigoBrkHeader)})`)
-          console.log(`  - Ref header: "${refBrkHeader}" (exists: ${headers.includes(refBrkHeader)})`)
-          console.log(`  - Codigo value: "${row[codigoBrkHeader]}" (type: ${typeof row[codigoBrkHeader]})`)
-          console.log(`  - Ref value: "${row[refBrkHeader]}" (type: ${typeof row[refBrkHeader]})`)
-
-          // Extract main fields
-          const subgrupo = String(row["SUBGRUPO"] || "")
-          const codigo_brk = String(row[codigoBrkHeader] || row[refBrkHeader] || "")
-          const ref_brk = String(row[refBrkHeader] || "")
-          const posicion = String(row["POSICIÓN"] || row["POSICION"] || "")
-          const ref_fmsi_oem = String(row["REF FMSI / OEM"] || "")
-          const marca = String(row["MARCA"] || "")
-          const linea = String(row["LÍNEA"] || row["LINEA"] || "")
-          const modelo = String(row["MODELO"] || "")
-          const version = String(row["VERSIÓN"] || row["VERSION"] || "")
-
-          console.log(`[v0] PRODUCTION DEBUG - Row ${index + 1} final extracted values:`, {
-            codigo_brk: `"${codigo_brk}" (length: ${codigo_brk.length})`,
-            ref_brk: `"${ref_brk}" (length: ${ref_brk.length})`,
-            marca: `"${marca}"`,
-            linea: `"${linea}"`,
-            modelo: `"${modelo}"`,
+            // Map common variations to standard field names
+            if (normalized.includes("CODIGO") && normalized.includes("BRK")) {
+              headerMap.set("codigo_brk", header)
+            } else if (normalized === "REFBRK" || (normalized.includes("REF") && normalized.includes("BRK"))) {
+              headerMap.set("ref_brk", header)
+            } else if (normalized === "SUBGRUPO") {
+              headerMap.set("subgrupo", header)
+            } else if (normalized === "POSICION") {
+              headerMap.set("posicion", header)
+            } else if (normalized.includes("FMSI") || normalized.includes("OEM")) {
+              headerMap.set("ref_fmsi_oem", header)
+            } else if (normalized === "MARCA") {
+              headerMap.set("marca", header)
+            } else if (normalized === "LINEA") {
+              headerMap.set("linea", header)
+            } else if (normalized === "MODELO") {
+              headerMap.set("modelo", header)
+            } else if (normalized === "VERSION") {
+              headerMap.set("version", header)
+            } else if (normalized === "PRECIO") {
+              headerMap.set("precio", header)
+            } else if (normalized === "STOCK") {
+              headerMap.set("stock", header)
+            }
+            // Add dimensional mappings
+            else if (normalized.includes("LARGO") && normalized.includes("MM") && !normalized.includes("10")) {
+              headerMap.set("largo_mm", header)
+            } else if (normalized.includes("ANCHO") && normalized.includes("MM")) {
+              headerMap.set("ancho_mm", header)
+            } else if (
+              normalized.includes("ESPESOR") &&
+              normalized.includes("MM") &&
+              !normalized.includes("MIN") &&
+              !normalized.includes("C")
+            ) {
+              headerMap.set("espesor_mm", header)
+            }
           })
+
+          return headerMap
+        }
+
+        if (jsonData.length === 0) {
+          throw new Error("El archivo Excel está vacío")
+        }
+
+        const headers = Object.keys(jsonData[0])
+        const headerMap = createHeaderMap(headers)
+
+        console.log("[v0] Header mapping created:", Object.fromEntries(headerMap))
+
+        const products: Product[] = jsonData.map((row: any, index: number) => {
+          const getValue = (field: string): string => {
+            const header = headerMap.get(field)
+            return header ? String(row[header] || "") : ""
+          }
+
+          // Extract main fields using robust mapping
+          const subgrupo = getValue("subgrupo")
+          const codigo_brk = getValue("codigo_brk") || getValue("ref_brk") // Fallback to ref_brk
+          const ref_brk = getValue("ref_brk")
+          const posicion = getValue("posicion")
+          const ref_fmsi_oem = getValue("ref_fmsi_oem")
+          const marca = getValue("marca")
+          const linea = getValue("linea")
+          const modelo = getValue("modelo")
+          const version = getValue("version")
+
+          if (!codigo_brk || codigo_brk.trim() === "") {
+            throw new Error(
+              `Fila ${index + 1}: No se encontró CÓDIGOBRK o REF BRK válido. Headers disponibles: ${headers.join(", ")}`,
+            )
+          }
 
           // Generate SKU: codigo_brk + marca + linea + modelo
           const sku = `${codigo_brk}${marca}${linea}${modelo}`.replace(/\s+/g, "").toUpperCase()
@@ -179,8 +208,8 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
             sku,
             category: subgrupo,
             vendor: "BRK",
-            price: Number.parseFloat(row["PRECIO"] || "0") || 0,
-            stock: Number.parseInt(row["STOCK"] || "0") || 0,
+            price: Number.parseFloat(getValue("precio") || "0") || 0,
+            stock: Number.parseInt(getValue("stock") || "0") || 0,
             images: [],
             subgrupo,
             codigo_brk,
@@ -191,9 +220,9 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
             linea,
             modelo,
             version,
-            largo_mm: Number.parseFloat(row["LARGO (mm)"] || "0") || null,
-            ancho_mm: Number.parseFloat(row["ANCHO (mm)"] || "0") || null,
-            espesor_mm: Number.parseFloat(row["ESPESOR (mm)"] || "0") || null,
+            largo_mm: Number.parseFloat(getValue("largo_mm") || "0") || null,
+            ancho_mm: Number.parseFloat(getValue("ancho_mm") || "0") || null,
+            espesor_mm: Number.parseFloat(getValue("espesor_mm") || "0") || null,
             diametro_a_mm: Number.parseFloat(row["DIÁMETRO (A) mm"] || "0") || null,
             alto_b_mm: Number.parseFloat(row["ALTO (B) mm"] || "0") || null,
             espesor_c_mm: Number.parseFloat(row["ESPESOR (C) mm"] || "0") || null,
@@ -211,16 +240,9 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
             specifications: {},
           }
 
-          console.log(`Product ${index + 1}:`, {
-            codigo_brk: product.codigo_brk,
-            name: product.name,
-            sku: product.sku,
-          }) // Debug log
-
           return product
         })
 
-        console.log(`Parsed ${products.length} products total`) // Debug log
         resolve(products)
       } catch (error) {
         console.error("Error parsing Excel:", error)
