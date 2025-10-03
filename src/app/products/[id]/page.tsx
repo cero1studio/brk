@@ -3,11 +3,15 @@ import { notFound } from "next/navigation"
 import ProductDetailView from "@/components/product/ProductDetailView"
 import type { Product } from "@/types"
 
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function getProduct(id: string): Promise<Product | null> {
   try {
     console.log("🔍 Fetching product with ID:", id)
 
-    const { data: product, error } = await supabase.from("products").select("*").eq("id", id).single()
+    const { data: product, error } = await supabase.from("products").select("*").eq("id", id).order("updated_at", { ascending: false }).single()
 
     if (error) {
       console.error("❌ Supabase error:", error)
@@ -27,8 +31,39 @@ async function getProduct(id: string): Promise<Product | null> {
     if (relatedError) {
       console.error("❌ Error fetching related products:", relatedError)
     }
+    
+    // Log related products to see their structure
+    if (relatedProducts && relatedProducts.length > 0) {
+      console.log("🔍 Related products from database:", relatedProducts.slice(0, 3).map(p => ({
+        id: p.id,
+        marca: p.marca,
+        linea: p.linea,
+        modelo: p.modelo,
+        version: p.version,
+        posicion: p.posicion
+      })))
+    }
 
     console.log("✅ Product found:", product.name)
+    console.log("🔍 Single Product - Raw data from database:", {
+      id: product.id,
+      marca: product.marca,
+      linea: product.linea,
+      modelo: product.modelo,
+      version: product.version,
+      posicion: product.posicion,
+      codigo_brk: product.codigo_brk,
+      updated_at: product.updated_at
+    })
+    
+    // Log to see if linea contains "S" or if modelo contains "S"
+    console.log("🔍 Database field analysis:", {
+      "linea field contains": product.linea,
+      "modelo field contains": product.modelo,
+      "version field contains": product.version,
+      "linea length": product.linea?.length,
+      "modelo length": product.modelo?.length
+    })
 
     // Transform the database product to our Product type
     const transformedProduct: Product = {
@@ -41,6 +76,7 @@ async function getProduct(id: string): Promise<Product | null> {
       stock: product.stock || 0,
       sku: product.sku || "",
       images: product.images ? (Array.isArray(product.images) ? product.images : [product.images]) : [],
+      updated_at: product.updated_at,
       specifications: {
         refFmsiOem: product.ref_fmsi_oem || "",
         largo_mm: product.largo_mm,
@@ -75,6 +111,9 @@ async function getProduct(id: string): Promise<Product | null> {
                 ano: "",
                 especificacionVehiculo: `${p.marca} ${p.linea || ""} ${p.modelo || ""}`.trim(),
                 eje: p.posicion || "",
+                marca: p.marca || "",
+                linea: p.linea || "",
+                modelo: p.modelo || "",
                 isHighlighted: false,
               }))
               .filter(
@@ -90,11 +129,24 @@ async function getProduct(id: string): Promise<Product | null> {
                   ano: "",
                   especificacionVehiculo: `${product.marca} ${product.linea || ""} ${product.modelo || ""}`.trim(),
                   eje: product.posicion || "",
+                  marca: product.marca || "",
+                  linea: product.linea || "",
+                  modelo: product.modelo || "",
                   isHighlighted: false,
                 },
               ]
             : [],
     }
+
+    console.log("🔍 Single Product - Transformed data:", {
+      id: transformedProduct.id,
+      name: transformedProduct.name,
+      marca: transformedProduct.specifications?.marca,
+      linea: transformedProduct.specifications?.linea,
+      modelo: transformedProduct.specifications?.modelo,
+      codigoBrk: transformedProduct.specifications?.codigoBrk,
+      updated_at: transformedProduct.updated_at
+    })
 
     return transformedProduct
   } catch (error) {

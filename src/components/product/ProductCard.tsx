@@ -35,7 +35,25 @@ export default function ProductCard({ product }: ProductCardProps) {
   const parseVehicleSpec = (especificacionVehiculo: string) => {
     const parts = especificacionVehiculo.trim().split(" ")
     const marca = parts[0] || ""
-    const linea = parts[1] || ""
+    
+    // Find the last part that looks like a year (4 digits)
+    let linea = ""
+    let modelo = ""
+    
+    for (let i = 1; i < parts.length; i++) {
+      if (/^\d{4}$/.test(parts[i])) {
+        // This is the year, everything before is linea
+        linea = parts.slice(1, i).join(" ")
+        modelo = parts[i]
+        break
+      }
+    }
+    
+    // If no year found, everything after marca is linea
+    if (!modelo) {
+      linea = parts.slice(1).join(" ")
+    }
+    
     return { marca, linea }
   }
 
@@ -52,7 +70,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             <div className="w-full md:w-1/6 flex-shrink-0 flex flex-col items-center">
               <div className="aspect-square relative bg-muted rounded overflow-hidden border border-border w-full">
                 <Image
-                  src={product.images[0] || "https://placehold.co/150x150.png"}
+                  src={`${product.images[0] || "https://placehold.co/150x150.png"}?v=${product.updated_at || product.id}`}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300 ease-in-out"

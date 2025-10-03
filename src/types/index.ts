@@ -4,6 +4,9 @@ export interface ApplicationItem {
   ano?: string;
   especificacionVehiculo: string;
   eje?: string;
+  marca?: string;
+  linea?: string;
+  modelo?: string;
   isHighlighted?: boolean;
 }
 
@@ -49,5 +52,6 @@ export interface Product {
   vendor: string; 
   stock: number; 
   sku: string; 
+  updated_at?: string;
   aplicaciones?: ApplicationItem[];
 }

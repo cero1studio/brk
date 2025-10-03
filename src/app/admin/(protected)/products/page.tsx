@@ -41,7 +41,7 @@ import {
 
 const productSchema = z.object({
   codigo_brk: z.string().min(1, "Código BRK es requerido"),
-  name: z.string().min(1, "Nombre es requerido"),
+  name: z.string().optional(),
   subgrupo: z.string().nullable().optional(),
   posicion: z.string().nullable().optional(),
   ref_fmsi_oem: z.string().nullable().optional(),
@@ -308,7 +308,11 @@ export default function AdminProductsPage() {
   const onSubmit = async (data: ProductFormValues) => {
     try {
       if (editingProduct) {
-        const { error } = await supabase.from("products").update(data).eq("id", editingProduct.id)
+        const updateData = {
+          ...data,
+          updated_at: new Date().toISOString()
+        }
+        const { error } = await supabase.from("products").update(updateData).eq("id", editingProduct.id)
 
         if (error) {
           toast({
@@ -459,25 +463,6 @@ export default function AdminProductsPage() {
                             <FormControl>
                               <Input
                                 placeholder="Ej: BRK001"
-                                value={field.value || ""}
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nombre *</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Nombre del producto"
                                 value={field.value || ""}
                                 onChange={field.onChange}
                                 onBlur={field.onBlur}

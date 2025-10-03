@@ -22,6 +22,11 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "BRK Performance Brakes",
   description: "Su proveedor principal de soluciones de frenado de alto rendimiento.",
+  icons: {
+    icon: '/favicon.png?v=2',
+    shortcut: '/favicon.png?v=2',
+    apple: '/favicon.png?v=2',
+  },
 }
 
 export default function RootLayout({
@@ -31,6 +36,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={cn(inter.variable, spaceGrotesk.variable)}>
+      <head>
+        <link rel="icon" type="image/png" href="/favicon.png?v=2" />
+        <link rel="shortcut icon" type="image/png" href="/favicon.png?v=2" />
+        <link rel="apple-touch-icon" href="/favicon.png?v=2" />
+      </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
           <BrkWatermark />

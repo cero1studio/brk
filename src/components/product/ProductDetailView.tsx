@@ -74,7 +74,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
 ¿Podrían proporcionarme más detalles sobre disponibilidad y precio?`
 
     const encodedMessage = encodeURIComponent(message)
-    const whatsappUrl = `https://wa.me/573001234567?text=${encodedMessage}`
+    const whatsappUrl = `https://wa.me/573022402983?text=${encodedMessage}`
     window.open(whatsappUrl, "_blank")
   }
 
@@ -101,7 +101,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
                 <div className="space-y-4">
                   <div className="aspect-square relative group rounded-lg overflow-hidden border border-border">
                     <Image
-                      src={selectedImage || "/placeholder.svg"}
+                      src={`${selectedImage || "/placeholder.svg"}?v=${product.updated_at || product.id}`}
                       alt={product.name}
                       fill
                       className="object-cover"
@@ -144,7 +144,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
                           )}
                         >
                           <Image
-                            src={img || "/placeholder.svg"}
+                            src={`${img || "/placeholder.svg"}?v=${product.updated_at || product.id}`}
                             alt={`${product.name} thumbnail ${index + 1}`}
                             fill
                             className="object-cover"
@@ -209,10 +209,10 @@ export default function ProductDetailView({ product }: { product: Product }) {
                   </TableHeader>
                   <TableBody>
                     {product.aplicaciones.map((app, index) => {
-                      const vehicleInfo = app.especificacionVehiculo.split(" ")
-                      const marca = vehicleInfo[0] || ""
-                      const linea = vehicleInfo[1] || ""
-                      const modelo = vehicleInfo[2] || ""
+                      // Use the original data from database without splitting
+                      const marca = app.marca || ""
+                      const linea = app.linea || ""
+                      const modelo = app.modelo || ""
 
                       return (
                         <TableRow

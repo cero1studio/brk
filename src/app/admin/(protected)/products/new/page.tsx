@@ -1,5 +1,6 @@
 "use client"
 import { useForm, useFieldArray } from "react-hook-form"
+import { useEffect } from "react"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -18,8 +19,8 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
 
 const productSchema = z.object({
-  name: z.string().min(3, "El nombre del producto debe tener al menos 3 caracteres."),
-  description: z.string().min(10, "La descripción debe tener al menos 10 caracteres."),
+  name: z.string().optional(),
+  description: z.string().optional(),
   price: z.coerce
     .number({ invalid_type_error: "El precio debe ser un número." })
     .min(0.01, "El precio debe ser positivo."),
@@ -86,6 +87,47 @@ export default function NewProductPage() {
     },
   })
 
+  // Function to generate name and SKU automatically
+  const generateNameAndSKU = () => {
+    const specs = form.getValues("specifications")
+    const marca = specs.marca || ""
+    const linea = specs.linea || ""
+    const modelo = specs.modelo || ""
+    const subgrupo = specs.subgrupo || ""
+    const posicion = specs.posicion || ""
+    const version = specs.version || ""
+    const skuField = form.getValues("sku") || ""
+
+    // Generate SKU: use existing SKU or generate from specs
+    let generatedSKU = skuField
+    if (!generatedSKU && marca && linea && modelo) {
+      generatedSKU = `${marca}${linea}${modelo}`.replace(/\s+/g, "").toUpperCase()
+    }
+
+    // Generate name: marca + linea + modelo + subgrupo
+    let generatedName = ""
+    if (marca && linea && modelo && subgrupo) {
+      generatedName = `${marca} ${linea} ${modelo} ${subgrupo}`.trim()
+    }
+
+    // Generate description: subgrupo + posicion + para + marca + linea + modelo + version
+    let generatedDescription = ""
+    if (subgrupo && posicion && marca && linea && modelo) {
+      generatedDescription = `${subgrupo} ${posicion} para ${marca} ${linea} ${modelo} ${version}`.trim()
+    }
+
+    // Update form fields
+    if (generatedSKU && generatedSKU !== skuField) {
+      form.setValue("sku", generatedSKU)
+    }
+    if (generatedName && generatedName !== form.getValues("name")) {
+      form.setValue("name", generatedName)
+    }
+    if (generatedDescription && generatedDescription !== form.getValues("description")) {
+      form.setValue("description", generatedDescription)
+    }
+  }
+
   const {
     fields: imageFields,
     append: appendImage,
@@ -94,6 +136,16 @@ export default function NewProductPage() {
     control: form.control,
     name: "images",
   })
+
+  // Watch for changes in specifications to auto-generate name and SKU
+  const watchedSpecs = form.watch("specifications")
+  useEffect(() => {
+    // Only auto-generate if we have the required fields
+    const specs = watchedSpecs || {}
+    if (specs.marca && specs.linea && specs.modelo && specs.subgrupo) {
+      generateNameAndSKU()
+    }
+  }, [watchedSpecs])
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -183,38 +235,32 @@ export default function NewProductPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <section className="space-y-4 p-4 border border-border rounded-lg bg-card/50">
-              <h3 className="text-lg font-semibold font-headline text-primary">Información Básica</h3>
-              <div className="grid md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      {" "}
-                      <FormLabel>Nombre del Producto</FormLabel>{" "}
-                      <FormControl>
-                        <Input
-                          placeholder="ej., Filtro de Aire de Rendimiento"
-                          {...field}
-                          className="bg-input border-border focus:border-primary"
-                        />
-                      </FormControl>{" "}
-                      <FormMessage />{" "}
-                    </FormItem>
-                  )}
-                />
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold font-headline text-primary">Información Básica</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={generateNameAndSKU}
+                  className="text-xs"
+                >
+                  🔄 Generar Automáticamente
+                </Button>
+              </div>
+              <div className="grid md:grid-cols-1 gap-6">
                 <FormField
                   control={form.control}
                   name="sku"
                   render={({ field }) => (
                     <FormItem>
                       {" "}
-                      <FormLabel>SKU / CÓDIGOBRK</FormLabel>{" "}
+                      <FormLabel>SKU / CÓDIGOBRK (Generado automáticamente)</FormLabel>{" "}
                       <FormControl>
                         <Input
-                          placeholder="ej., PAF-12345"
-                          {...field}
-                          className="bg-input border-border focus:border-primary"
+                          placeholder="Se genera automáticamente desde marca + línea + modelo"
+                          value={field.value}
+                          readOnly
+                          className="bg-muted border-border text-muted-foreground cursor-not-allowed"
                         />
                       </FormControl>{" "}
                       <FormMessage />{" "}
@@ -222,25 +268,6 @@ export default function NewProductPage() {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    {" "}
-                    <FormLabel>Descripción Detallada</FormLabel>{" "}
-                    <FormControl>
-                      <Textarea
-                        placeholder="Proporcione una descripción completa..."
-                        {...field}
-                        rows={5}
-                        className="bg-input border-border focus:border-primary"
-                      />
-                    </FormControl>{" "}
-                    <FormMessage />{" "}
-                  </FormItem>
-                )}
-              />
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <FormField
                   control={form.control}

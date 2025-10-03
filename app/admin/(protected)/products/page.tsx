@@ -38,7 +38,11 @@ import {
 
 const productSchema = z.object({
   codigo_brk: z.string().min(1, "Código BRK es requerido"),
-  name: z.string().min(1, "Nombre es requerido"),
+  name: z.string().optional(),
+  category: z.string().optional(),
+  vendor: z.string().optional(),
+  price: z.coerce.number().optional(),
+  stock: z.coerce.number().optional(),
   subgrupo: z.string().nullable().optional(),
   posicion: z.string().nullable().optional(),
   ref_fmsi_oem: z.string().nullable().optional(),
@@ -306,9 +310,45 @@ export default function AdminProductsPage() {
 
       console.log("[v0] Validation successful, data:", validation.data)
 
+      // Generate name and SKU automatically (same logic as bulk upload)
+      const marca = validation.data.marca || ""
+      const linea = validation.data.linea || ""
+      const modelo = validation.data.modelo || ""
+      const subgrupo = validation.data.subgrupo || ""
+      const posicion = validation.data.posicion || ""
+      const version = validation.data.version || ""
+      const codigo_brk = validation.data.codigo_brk || ""
+
+      // Generate SKU: codigo_brk + marca + linea + modelo
+      const generatedSKU = `${codigo_brk}${marca}${linea}${modelo}`.replace(/\s+/g, "").toUpperCase()
+
+      // Generate name: marca + linea + modelo + subgrupo
+      const generatedName = `${marca} ${linea} ${modelo} ${subgrupo}`.trim() || "Producto sin nombre"
+
+      // Generate description: subgrupo + posicion + para + marca + linea + modelo + version
+      const generatedDescription = `${subgrupo} ${posicion} para ${marca} ${linea} ${modelo} ${version}`.trim()
+
+      // Add generated fields to data
+      const finalData = {
+        ...validation.data,
+        name: generatedName,
+        sku: generatedSKU,
+        description: generatedDescription,
+        category: subgrupo || "General", // Use subgrupo as category, fallback to "General"
+        vendor: "BRK", // Set default vendor
+        price: validation.data.price || 0,
+        stock: validation.data.stock || 0,
+      }
+
+      console.log("[v0] Generated data:", finalData)
+
       if (editingProduct) {
         console.log("[v0] Updating product with ID:", editingProduct.id)
-        const { error } = await supabase.from("products").update(validation.data).eq("id", editingProduct.id)
+        const updateData = {
+          ...finalData,
+          updated_at: new Date().toISOString()
+        }
+        const { error } = await supabase.from("products").update(updateData).eq("id", editingProduct.id)
 
         if (error) {
           console.log("[v0] Update error:", error)
@@ -327,7 +367,7 @@ export default function AdminProductsPage() {
         })
       } else {
         console.log("[v0] Creating new product")
-        const { error } = await supabase.from("products").insert([validation.data])
+        const { error } = await supabase.from("products").insert([finalData])
 
         if (error) {
           console.log("[v0] Insert error:", error)
@@ -460,31 +500,39 @@ export default function AdminProductsPage() {
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Nombre del Producto *</label>
-                        <Input
-                          {...form.register("name")}
-                          placeholder="Ej: Pastillas de Freno"
-                          className="bg-input border-border"
-                        />
-                      </div>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Subgrupo</label>
-                        <Input
+                        <select
                           {...form.register("subgrupo")}
-                          placeholder="Ej: PASTILLAS"
-                          className="bg-input border-border"
-                        />
+                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">Seleccionar subgrupo</option>
+                          <option value="PASTILLAS">Pastillas</option>
+                          <option value="DISCOS">Discos</option>
+                          <option value="TAMBORES">Tambores</option>
+                          <option value="LIQUIDOS">Líquidos</option>
+                          <option value="FILTROS">Filtros</option>
+                          <option value="SENSORES">Sensores</option>
+                          <option value="CABLES">Cables</option>
+                          <option value="BOMBAS">Bombas</option>
+                          <option value="MANGUERAS">Mangueras</option>
+                          <option value="OTROS">Otros</option>
+                        </select>
                       </div>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Posición</label>
-                        <Input
+                        <select
                           {...form.register("posicion")}
-                          placeholder="Ej: DELANTERO"
-                          className="bg-input border-border"
-                        />
+                          className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">Seleccionar posición</option>
+                          <option value="DELANTERO">Delantero</option>
+                          <option value="TRASERO">Trasero</option>
+                          <option value="DELANTERO/TRASERO">Delantero/Trasero</option>
+                          <option value="UNIVERSAL">Universal</option>
+                        </select>
                       </div>
 
                       <div className="space-y-2">

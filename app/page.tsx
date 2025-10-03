@@ -9,6 +9,7 @@ import ProductsLoading from "../src/components/product/ProductsLoading"
 import ProductsLoadingOverlay from "../src/components/product/ProductsLoadingOverlay"
 import { supabase } from "../src/lib/supabase"
 import type { Product } from "../src/types"
+import { Button } from "../src/components/ui/button"
 
 async function getProducts(searchParams?: {
   q?: string
@@ -26,7 +27,7 @@ async function getProducts(searchParams?: {
   const from = (page - 1) * itemsPerPage
   const to = from + itemsPerPage - 1
 
-  let query = supabase.from("products").select("*", { count: "exact" })
+  let query = supabase.from("products").select("*", { count: "exact" }).order("updated_at", { ascending: false })
 
   if (searchParams?.q) {
     const searchTerm = searchParams.q.toLowerCase()
@@ -71,6 +72,50 @@ async function getProducts(searchParams?: {
     if (groupedProducts.has(key)) {
       // Merge applications for existing product
       const existing = groupedProducts.get(key)
+      
+      // Update ALL fields with the latest data
+      existing.id = item.id
+      existing.name = item.name || existing.name
+      existing.description = item.description || existing.description
+      existing.price = item.price !== undefined ? item.price : existing.price
+      existing.category = item.category || existing.category
+      existing.vendor = item.vendor || existing.vendor
+      existing.stock = item.stock !== undefined ? item.stock : existing.stock
+      existing.sku = item.sku || existing.sku
+      existing.updated_at = item.updated_at || existing.updated_at
+      
+      // Update images if they exist in the new item
+      if (item.images && item.images.length > 0) {
+        existing.images = Array.isArray(item.images) ? item.images : [item.images]
+      }
+      
+      // Update specifications with latest data
+      existing.specifications = {
+        refFmsiOem: item.ref_fmsi_oem || existing.specifications.refFmsiOem,
+        ref_brk: item.ref_brk || existing.specifications.ref_brk,
+        largo_mm: item.largo_mm !== null ? item.largo_mm : existing.specifications.largo_mm,
+        ancho_mm: item.ancho_mm !== null ? item.ancho_mm : existing.specifications.ancho_mm,
+        espesor_mm: item.espesor_mm !== null ? item.espesor_mm : existing.specifications.espesor_mm,
+        diametro_A_mm: item.diametro_a_mm !== null ? item.diametro_a_mm : existing.specifications.diametro_A_mm,
+        alto_B_mm: item.alto_b_mm !== null ? item.alto_b_mm : existing.specifications.alto_B_mm,
+        subgrupo: item.subgrupo || existing.specifications.subgrupo,
+        marca: item.marca || existing.specifications.marca,
+        linea: item.linea || existing.specifications.linea,
+        modelo: item.modelo || existing.specifications.modelo,
+        posicion: item.posicion || existing.specifications.posicion,
+        codigoBrk: item.codigo_brk || existing.specifications.codigoBrk,
+        version: item.version || existing.specifications.version,
+        xJuegoPastilla: item.x_juego_pastilla !== null ? item.x_juego_pastilla : existing.specifications.xJuegoPastilla,
+        espesor_C_mm: item.espesor_c_mm !== null ? item.espesor_c_mm : existing.specifications.espesor_C_mm,
+        espesor_min_mm: item.espesor_min_mm !== null ? item.espesor_min_mm : existing.specifications.espesor_min_mm,
+        agujeros: item.agujeros !== null ? item.agujeros : existing.specifications.agujeros,
+        diametro_interno_A_mm: item.diametro_interno_a_mm !== null ? item.diametro_interno_a_mm : existing.specifications.diametro_interno_A_mm,
+        diametro_orificio_central_C_mm: item.diametro_orificio_central_c_mm !== null ? item.diametro_orificio_central_c_mm : existing.specifications.diametro_orificio_central_C_mm,
+        altura_total_D_mm: item.altura_total_d_mm !== null ? item.altura_total_d_mm : existing.specifications.altura_total_D_mm,
+        diametro_interno_maximo: item.diametro_interno_maximo !== null ? item.diametro_interno_maximo : existing.specifications.diametro_interno_maximo,
+        equivalencias: item.equivalencias || existing.specifications.equivalencias,
+      }
+      
       if (item.marca) {
         existing.aplicaciones.push({
           serie: item.modelo || "",
@@ -93,6 +138,7 @@ async function getProducts(searchParams?: {
         stock: item.stock || 0,
         sku: item.sku || "",
         images: item.images ? (Array.isArray(item.images) ? item.images : [item.images]) : [],
+        updated_at: item.updated_at,
         specifications: {
           refFmsiOem: item.ref_fmsi_oem || "",
           ref_brk: item.ref_brk || "",
@@ -171,6 +217,29 @@ function HomePageContent() {
     }
 
     loadProducts()
+    
+    // Reload products when the page becomes visible (user returns from admin)
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        const { products: newProducts, totalCount: newTotalCount } = await getProducts(searchParamsObj)
+        setProducts(newProducts)
+        setTotalCount(newTotalCount)
+      }
+    }
+    
+    // Reload products every 30 seconds to catch updates
+    const interval = setInterval(async () => {
+      const { products: newProducts, totalCount: newTotalCount } = await getProducts(searchParamsObj)
+      setProducts(newProducts)
+      setTotalCount(newTotalCount)
+    }, 30000)
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(interval)
+    }
   }, [searchParams.toString()])
 
   const query = searchParamsObj.q
@@ -205,7 +274,25 @@ function HomePageContent() {
         </section>
 
         <section className="mb-10 space-y-6">
-          <SearchBar />
+          <div className="flex justify-between items-center">
+            <div className="flex-1">
+              <SearchBar />
+            </div>
+            <Button 
+              onClick={async () => {
+                setIsLoading(true)
+                const { products: newProducts, totalCount: newTotalCount } = await getProducts(searchParamsObj)
+                setProducts(newProducts)
+                setTotalCount(newTotalCount)
+                setIsLoading(false)
+              }}
+              variant="outline"
+              size="sm"
+              className="ml-4"
+            >
+              🔄 Actualizar
+            </Button>
+          </div>
           <ProductFilters />
         </section>
 
