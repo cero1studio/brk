@@ -1,33 +1,21 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../src/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../src/components/ui/tabs"
 import { Button } from "../../../../src/components/ui/button"
 import { Progress } from "../../../../src/components/ui/progress"
 import { Alert, AlertDescription } from "../../../../src/components/ui/alert"
 import { Badge } from "../../../../src/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../../../src/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../src/components/ui/table"
-import { Upload, FileSpreadsheet, Archive, Download, AlertCircle, CheckCircle, Eye, RotateCcw } from "lucide-react"
+import { Upload, FileSpreadsheet, Archive, Download, AlertCircle, CheckCircle } from "lucide-react"
 import { useToast } from "../../../../src/hooks/use-toast"
 import {
   parseExcelFile,
   parseZipFile,
   uploadProductsToSupabase,
   simpleUpload,
-  getUploadHistory,
-  rollbackUpload,
   createSampleTemplate,
   type BulkUploadResult,
-  type UploadHistory,
 } from "../../../../src/lib/bulk-upload-supabase"
 
 export default function BulkUploadPage() {
@@ -41,30 +29,7 @@ export default function BulkUploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null)
 
-  // History states
-  const [uploadHistory, setUploadHistory] = useState<UploadHistory[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
-  const [selectedUpload, setSelectedUpload] = useState<UploadHistory | null>(null)
 
-  // Load upload history
-  const loadUploadHistory = useCallback(async () => {
-    setIsLoadingHistory(true)
-    try {
-      const history = await getUploadHistory()
-      setUploadHistory(history)
-      console.log(`Loaded ${history.length} upload history records`)
-    } catch (error) {
-      console.error("Failed to load upload history:", error)
-      toast({
-        title: "Información",
-        description: "Usando historial en memoria (las tablas de base de datos no están disponibles)",
-      })
-      // Still try to get cached history
-      setUploadHistory([])
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }, [toast])
 
   // Handle bulk upload (Excel + ZIP)
   const handleBulkUpload = async () => {
@@ -178,22 +143,6 @@ export default function BulkUploadPage() {
   }
 
   // Handle rollback
-  const handleRollback = async (uploadId: string) => {
-    try {
-      await rollbackUpload(uploadId)
-      toast({
-        title: "¡Éxito!",
-        description: "Carga revertida exitosamente",
-      })
-      await loadUploadHistory()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al revertir la carga",
-        variant: "destructive",
-      })
-    }
-  }
 
   const downloadTemplate = async () => {
     try {
@@ -249,12 +198,9 @@ export default function BulkUploadPage() {
       </div>
 
       <Tabs defaultValue="bulk" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="bulk">Carga con Archivos</TabsTrigger>
           <TabsTrigger value="simple">Carga Simple</TabsTrigger>
-          <TabsTrigger value="history" onClick={loadUploadHistory}>
-            Historial
-          </TabsTrigger>
         </TabsList>
 
         {/* Bulk Upload Tab */}
@@ -480,151 +426,6 @@ export default function BulkUploadPage() {
           </Card>
         </TabsContent>
 
-        {/* History Tab */}
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historial de Cargas</CardTitle>
-              <CardDescription>Revisa el historial de cargas masivas y gestiona rollbacks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingHistory ? (
-                <div className="text-center py-8">
-                  <p>Cargando historial...</p>
-                </div>
-              ) : uploadHistory.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No hay cargas registradas</p>
-                  <p className="text-sm mt-2">Realiza tu primera carga masiva para ver el historial aquí</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Productos</TableHead>
-                      <TableHead>Exitosos</TableHead>
-                      <TableHead>Fallidos</TableHead>
-                      <TableHead>Imágenes</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {uploadHistory.map((upload) => (
-                      <TableRow key={upload.id}>
-                        <TableCell>{new Date(upload.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              upload.status === "completed"
-                                ? "default"
-                                : upload.status === "failed"
-                                  ? "destructive"
-                                  : "secondary"
-                            }
-                          >
-                            {upload.status === "completed"
-                              ? "Completado"
-                              : upload.status === "failed"
-                                ? "Fallido"
-                                : upload.status === "rolled_back"
-                                  ? "Revertido"
-                                  : "Parcial"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{upload.total_products}</TableCell>
-                        <TableCell className="text-green-600">{upload.successful_products}</TableCell>
-                        <TableCell className="text-red-600">{upload.failed_products}</TableCell>
-                        <TableCell>
-                          {upload.has_images ? (
-                            <Badge variant="outline">Con imágenes</Badge>
-                          ) : (
-                            <Badge variant="secondary">Sin imágenes</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedUpload(upload)}>
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Detalles de Carga</DialogTitle>
-                                  <DialogDescription>Información detallada de la carga masiva</DialogDescription>
-                                </DialogHeader>
-                                {selectedUpload && (
-                                  <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <p className="text-sm font-medium">ID de Carga</p>
-                                        <p className="text-sm text-muted-foreground">{selectedUpload.upload_id}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Fecha</p>
-                                        <p className="text-sm text-muted-foreground">
-                                          {new Date(selectedUpload.created_at).toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Total de Productos</p>
-                                        <p className="text-sm text-muted-foreground">{selectedUpload.total_products}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Estado</p>
-                                        <Badge
-                                          variant={
-                                            selectedUpload.status === "completed"
-                                              ? "default"
-                                              : selectedUpload.status === "failed"
-                                                ? "destructive"
-                                                : "secondary"
-                                          }
-                                        >
-                                          {selectedUpload.status === "completed"
-                                            ? "Completado"
-                                            : selectedUpload.status === "failed"
-                                              ? "Fallido"
-                                              : selectedUpload.status === "rolled_back"
-                                                ? "Revertido"
-                                                : "Parcial"}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    {selectedUpload.errors.length > 0 && (
-                                      <div>
-                                        <p className="text-sm font-medium mb-2">Errores:</p>
-                                        <div className="max-h-40 overflow-y-auto">
-                                          <ul className="list-disc list-inside text-xs space-y-1">
-                                            {selectedUpload.errors.map((error, index) => (
-                                              <li key={index}>{error}</li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                            {upload.successful_products > 0 && upload.status !== "rolled_back" && (
-                              <Button variant="outline" size="sm" onClick={() => handleRollback(upload.upload_id)}>
-                                <RotateCcw className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   )

@@ -1,33 +1,21 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Upload, FileSpreadsheet, Archive, Download, AlertCircle, CheckCircle, Eye, RotateCcw } from "lucide-react"
+import { Upload, FileSpreadsheet, Archive, Download, AlertCircle, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   parseExcelFile,
   parseZipFile,
   uploadProductsToSupabase,
   simpleUpload,
-  getUploadHistory,
-  rollbackUpload,
   createSampleTemplate,
   type BulkUploadResult,
-  type UploadHistory,
 } from "@/lib/bulk-upload-supabase"
 
 export default function BulkUploadPage() {
@@ -40,31 +28,6 @@ export default function BulkUploadPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null)
-
-  // History states
-  const [uploadHistory, setUploadHistory] = useState<UploadHistory[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
-  const [selectedUpload, setSelectedUpload] = useState<UploadHistory | null>(null)
-
-  // Load upload history
-  const loadUploadHistory = useCallback(async () => {
-    setIsLoadingHistory(true)
-    try {
-      const history = await getUploadHistory()
-      setUploadHistory(history)
-      console.log(`Loaded ${history.length} upload history records`)
-    } catch (error) {
-      console.error("Failed to load upload history:", error)
-      toast({
-        title: "Información",
-        description: "Usando historial en memoria (las tablas de base de datos no están disponibles)",
-      })
-      // Still try to get cached history
-      setUploadHistory([])
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }, [toast])
 
   // Handle bulk upload (Excel + ZIP)
   const handleBulkUpload = async () => {
@@ -94,30 +57,21 @@ export default function BulkUploadPage() {
       }
 
       // Upload products with ALL fields to database
-      const result = await uploadProductsToSupabase(products, imagesByFolder, setUploadProgress)
+      const result = await uploadProductsToSupabase(products, imagesByFolder, (progress) => {
+        setUploadProgress(progress)
+      })
 
       setUploadResult(result)
-
-      if (result.success) {
-        toast({
-          title: "¡Éxito!",
-          description: result.message,
-        })
-      } else {
-        toast({
-          title: "Carga parcial",
-          description: result.message,
-          variant: "destructive",
-        })
-      }
-
-      // Reload history
-      await loadUploadHistory()
+      toast({
+        title: "Carga completada",
+        description: `Se procesaron ${result.total} productos. ${result.success} exitosos, ${result.errors} con errores.`,
+        variant: result.errors > 0 ? "destructive" : "default",
+      })
     } catch (error) {
-      console.error("Bulk upload error:", error)
+      console.error("Error during bulk upload:", error)
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: "Ocurrió un error durante la carga masiva",
         variant: "destructive",
       })
     } finally {
@@ -125,7 +79,7 @@ export default function BulkUploadPage() {
     }
   }
 
-  // Handle simple upload (Excel only)
+  // Handle simple upload
   const handleSimpleUpload = async () => {
     if (!simpleExcelFile) {
       toast({
@@ -141,35 +95,21 @@ export default function BulkUploadPage() {
     setUploadResult(null)
 
     try {
-      console.log("Starting simple upload process...")
-      const products = await parseExcelFile(simpleExcelFile)
-      console.log(`Parsed ${products.length} products from file`)
-
-      // Upload products with ALL fields to database (no images)
-      const result = await simpleUpload(products, setUploadProgress)
-      console.log("Simple upload completed:", result)
+      const result = await simpleUpload(simpleExcelFile, (progress) => {
+        setUploadProgress(progress)
+      })
 
       setUploadResult(result)
-
-      if (result.success) {
-        toast({
-          title: "¡Éxito!",
-          description: result.message,
-        })
-      } else {
-        toast({
-          title: "Carga parcial",
-          description: result.message,
-          variant: "destructive",
-        })
-      }
-
-      await loadUploadHistory()
+      toast({
+        title: "Carga completada",
+        description: `Se procesaron ${result.total} productos. ${result.success} exitosos, ${result.errors} con errores.`,
+        variant: result.errors > 0 ? "destructive" : "default",
+      })
     } catch (error) {
-      console.error("Simple upload error:", error)
+      console.error("Error during simple upload:", error)
       toast({
         title: "Error",
-        description: (error as Error).message,
+        description: "Ocurrió un error durante la carga",
         variant: "destructive",
       })
     } finally {
@@ -177,225 +117,128 @@ export default function BulkUploadPage() {
     }
   }
 
-  // Handle rollback
-  const handleRollback = async (uploadId: string) => {
+  // Download sample template
+  const handleDownloadTemplate = async () => {
     try {
-      await rollbackUpload(uploadId)
-      toast({
-        title: "¡Éxito!",
-        description: "Carga revertida exitosamente",
-      })
-      await loadUploadHistory()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al revertir la carga",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const downloadTemplate = async () => {
-    try {
-      const XLSX = await import("xlsx")
-      const template = createSampleTemplate()
-
-      // Convert to Excel format using XLSX
-      const worksheet = XLSX.utils.json_to_sheet(template)
-      const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Productos")
-
-      // Generate Excel file
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      })
-
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "plantilla_productos_brk_completa.xlsx"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
-
+      await createSampleTemplate()
       toast({
         title: "Plantilla descargada",
-        description: "La plantilla Excel completa con todos los campos se ha descargado exitosamente",
+        description: "Se ha descargado la plantilla de ejemplo",
       })
     } catch (error) {
+      console.error("Error downloading template:", error)
       toast({
         title: "Error",
-        description: "Error al generar la plantilla Excel",
+        description: "No se pudo descargar la plantilla",
         variant: "destructive",
       })
     }
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Carga Masiva de Productos</h1>
-          <p className="text-muted-foreground">
-            Sube productos desde archivos Excel (.xlsx) con imágenes organizadas por subgrupo
-          </p>
-        </div>
-        <Button onClick={downloadTemplate} variant="outline">
-          <Download className="w-4 h-4 mr-2" />
-          Descargar Plantilla Excel
-        </Button>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Carga Masiva de Productos</h1>
+        <p className="text-muted-foreground">
+          Sube múltiples productos usando archivos Excel y ZIP con imágenes
+        </p>
       </div>
 
       <Tabs defaultValue="bulk" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="bulk">Carga con Archivos</TabsTrigger>
-          <TabsTrigger value="simple">Carga Simple</TabsTrigger>
-          <TabsTrigger value="history" onClick={loadUploadHistory}>
-            Historial
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="bulk">Carga Completa (Excel + ZIP)</TabsTrigger>
+          <TabsTrigger value="simple">Carga Simple (Solo Excel)</TabsTrigger>
         </TabsList>
 
         {/* Bulk Upload Tab */}
         <TabsContent value="bulk" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Carga Masiva con Imágenes
-              </CardTitle>
-              <CardDescription>
-                Sube un archivo Excel (.xlsx) con los datos de productos y un ZIP con todas las imágenes en la carpeta
-                raíz. Las imágenes deben tener el nombre del CÓDIGOBRK + .webp
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Excel File Upload */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Excel File Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5" />
+                  Archivo Excel
+                </CardTitle>
+                <CardDescription>
+                  Archivo Excel con los datos de los productos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <FileSpreadsheet className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Archivo Excel</p>
-                      <p className="text-xs text-muted-foreground">
-                        Debe contener TODOS los campos: SUBGRUPO, CÓDIGOBRK (requeridos) + todos los demás campos
-                      </p>
-                      <input
-                        type="file"
-                        accept=".xlsx,.xls,.csv"
-                        onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-                        className="hidden"
-                        id="excel-upload"
-                      />
-                      <label htmlFor="excel-upload">
-                        <Button variant="outline" className="cursor-pointer bg-transparent" asChild>
-                          <span>Seleccionar Archivo</span>
-                        </Button>
-                      </label>
-                      {excelFile && <p className="text-sm text-green-600 mt-2">✓ {excelFile.name}</p>}
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                    className="w-full p-2 border rounded-md"
+                  />
+                  {excelFile && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      {excelFile.name}
                     </div>
-                  </div>
-                </div>
-
-                {/* ZIP File Upload */}
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Archive className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Archivo ZIP (.zip)</p>
-                      <p className="text-xs text-muted-foreground">
-                        Carpetas con nombre del SUBGRUPO, imágenes: CÓDIGOBRK.webp
-                      </p>
-                      <input
-                        type="file"
-                        accept=".zip"
-                        onChange={(e) => setZipFile(e.target.files?.[0] || null)}
-                        className="hidden"
-                        id="zip-upload"
-                      />
-                      <label htmlFor="zip-upload">
-                        <Button variant="outline" className="cursor-pointer bg-transparent" asChild>
-                          <span>Seleccionar ZIP</span>
-                        </Button>
-                      </label>
-                      {zipFile && <p className="text-sm text-green-600 mt-2">✓ {zipFile.name}</p>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Estructura requerida:</strong>
-                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                    <li>
-                      <strong>Excel:</strong> Debe contener SUBGRUPO y CÓDIGOBRK (obligatorios)
-                    </li>
-                    <li>
-                      <strong>ZIP:</strong> Todas las imágenes en la carpeta raíz (sin subcarpetas)
-                    </li>
-                    <li>
-                      <strong>Imágenes:</strong> Nombre del archivo debe ser CÓDIGOBRK.webp
-                    </li>
-                    <li>
-                      <strong>Ejemplo:</strong> BRK001.webp, BRK002.webp, 32662.webp
-                    </li>
-                    <li>
-                      <strong>Nota:</strong> Si hay imágenes duplicadas, se sobrescribirán automáticamente
-                    </li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progreso de carga</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <Progress value={uploadProgress} />
-                </div>
-              )}
-
-              {/* Upload Result */}
-              {uploadResult && (
-                <Alert className={uploadResult.success ? "border-green-500" : "border-yellow-500"}>
-                  {uploadResult.success ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-yellow-500" />
                   )}
-                  <AlertDescription>
-                    <div className="space-y-2">
-                      <p>{uploadResult.message}</p>
-                      <div className="flex gap-4 text-sm">
-                        <span>Total: {uploadResult.totalProducts}</span>
-                        <span className="text-green-600">Exitosos: {uploadResult.successfulProducts}</span>
-                        <span className="text-red-600">Fallidos: {uploadResult.failedProducts}</span>
-                      </div>
-                      {uploadResult.errors.length > 0 && (
-                        <details className="mt-2">
-                          <summary className="cursor-pointer text-sm font-medium">Ver errores</summary>
-                          <ul className="list-disc list-inside mt-1 text-xs space-y-1">
-                            {uploadResult.errors.map((error, index) => (
-                              <li key={index}>{error}</li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Upload Button */}
-              <Button onClick={handleBulkUpload} disabled={!excelFile || isUploading} className="w-full" size="lg">
-                {isUploading ? "Subiendo..." : "Iniciar Carga Masiva"}
-              </Button>
+            {/* ZIP File Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Archive className="h-5 w-5" />
+                  Archivo ZIP (Opcional)
+                </CardTitle>
+                <CardDescription>
+                  Archivo ZIP con las imágenes de los productos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <input
+                    type="file"
+                    accept=".zip"
+                    onChange={(e) => setZipFile(e.target.files?.[0] || null)}
+                    className="w-full p-2 border rounded-md"
+                  />
+                  {zipFile && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      {zipFile.name}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upload Button */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <Button
+                  onClick={handleBulkUpload}
+                  disabled={!excelFile || isUploading}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isUploading ? (
+                    <>
+                      <Upload className="mr-2 h-4 w-4 animate-pulse" />
+                      Subiendo... {uploadProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Iniciar Carga Masiva
+                    </>
+                  )}
+                </Button>
+
+                {isUploading && (
+                  <Progress value={uploadProgress} className="w-full" />
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -405,227 +248,125 @@ export default function BulkUploadPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5" />
-                Carga Simple (Solo Archivo)
+                <FileSpreadsheet className="h-5 w-5" />
+                Carga Simple
               </CardTitle>
-              <CardDescription>Sube productos desde un archivo Excel (.xlsx) sin imágenes</CardDescription>
+              <CardDescription>
+                Sube solo un archivo Excel con los datos básicos de los productos
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <FileSpreadsheet className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-lg font-medium">Archivo Excel (.xlsx)</p>
-                    <p className="text-sm text-muted-foreground">
-                      Debe contener SUBGRUPO y CÓDIGOBRK como campos obligatorios
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={(e) => setSimpleExcelFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                    id="simple-excel-upload"
-                  />
-                  <label htmlFor="simple-excel-upload">
-                    <Button variant="outline" size="lg" className="cursor-pointer bg-transparent" asChild>
-                      <span>Seleccionar Archivo</span>
-                    </Button>
-                  </label>
-                  {simpleExcelFile && <p className="text-sm text-green-600">✓ {simpleExcelFile.name}</p>}
-                </div>
-              </div>
-
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progreso de carga</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <Progress value={uploadProgress} />
+            <CardContent className="space-y-4">
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setSimpleExcelFile(e.target.files?.[0] || null)}
+                className="w-full p-2 border rounded-md"
+              />
+              {simpleExcelFile && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  {simpleExcelFile.name}
                 </div>
               )}
-
-              {/* Upload Result */}
-              {uploadResult && (
-                <Alert className={uploadResult.success ? "border-green-500" : "border-yellow-500"}>
-                  {uploadResult.success ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-yellow-500" />
-                  )}
-                  <AlertDescription>
-                    <div className="space-y-2">
-                      <p>{uploadResult.message}</p>
-                      <div className="flex gap-4 text-sm">
-                        <span>Total: {uploadResult.totalProducts}</span>
-                        <span className="text-green-600">Exitosos: {uploadResult.successfulProducts}</span>
-                        <span className="text-red-600">Fallidos: {uploadResult.failedProducts}</span>
-                      </div>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-
               <Button
                 onClick={handleSimpleUpload}
                 disabled={!simpleExcelFile || isUploading}
                 className="w-full"
                 size="lg"
               >
-                {isUploading ? "Subiendo..." : "Iniciar Carga Simple"}
+                {isUploading ? (
+                  <>
+                    <Upload className="mr-2 h-4 w-4 animate-pulse" />
+                    Subiendo... {uploadProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Iniciar Carga Simple
+                  </>
+                )}
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* History Tab */}
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historial de Cargas</CardTitle>
-              <CardDescription>Revisa el historial de cargas masivas y gestiona rollbacks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingHistory ? (
-                <div className="text-center py-8">
-                  <p>Cargando historial...</p>
-                </div>
-              ) : uploadHistory.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No hay cargas registradas</p>
-                  <p className="text-sm mt-2">Realiza tu primera carga masiva para ver el historial aquí</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Productos</TableHead>
-                      <TableHead>Exitosos</TableHead>
-                      <TableHead>Fallidos</TableHead>
-                      <TableHead>Imágenes</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {uploadHistory.map((upload) => (
-                      <TableRow key={upload.id}>
-                        <TableCell>{new Date(upload.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              upload.status === "completed"
-                                ? "default"
-                                : upload.status === "failed"
-                                  ? "destructive"
-                                  : "secondary"
-                            }
-                          >
-                            {upload.status === "completed"
-                              ? "Completado"
-                              : upload.status === "failed"
-                                ? "Fallido"
-                                : upload.status === "rolled_back"
-                                  ? "Revertido"
-                                  : "Parcial"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{upload.total_products}</TableCell>
-                        <TableCell className="text-green-600">{upload.successful_products}</TableCell>
-                        <TableCell className="text-red-600">{upload.failed_products}</TableCell>
-                        <TableCell>
-                          {upload.has_images ? (
-                            <Badge variant="outline">Con imágenes</Badge>
-                          ) : (
-                            <Badge variant="secondary">Sin imágenes</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedUpload(upload)}>
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Detalles de Carga</DialogTitle>
-                                  <DialogDescription>Información detallada de la carga masiva</DialogDescription>
-                                </DialogHeader>
-                                {selectedUpload && (
-                                  <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <p className="text-sm font-medium">ID de Carga</p>
-                                        <p className="text-sm text-muted-foreground">{selectedUpload.upload_id}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Fecha</p>
-                                        <p className="text-sm text-muted-foreground">
-                                          {new Date(selectedUpload.created_at).toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Total de Productos</p>
-                                        <p className="text-sm text-muted-foreground">{selectedUpload.total_products}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Estado</p>
-                                        <Badge
-                                          variant={
-                                            selectedUpload.status === "completed"
-                                              ? "default"
-                                              : selectedUpload.status === "failed"
-                                                ? "destructive"
-                                                : "secondary"
-                                          }
-                                        >
-                                          {selectedUpload.status === "completed"
-                                            ? "Completado"
-                                            : selectedUpload.status === "failed"
-                                              ? "Fallido"
-                                              : selectedUpload.status === "rolled_back"
-                                                ? "Revertido"
-                                                : "Parcial"}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    {selectedUpload.errors.length > 0 && (
-                                      <div>
-                                        <p className="text-sm font-medium mb-2">Errores:</p>
-                                        <div className="max-h-40 overflow-y-auto">
-                                          <ul className="list-disc list-inside text-xs space-y-1">
-                                            {selectedUpload.errors.map((error, index) => (
-                                              <li key={index}>{error}</li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                            {upload.successful_products > 0 && upload.status !== "rolled_back" && (
-                              <Button variant="outline" size="sm" onClick={() => handleRollback(upload.upload_id)}>
-                                <RotateCcw className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              {isUploading && (
+                <Progress value={uploadProgress} className="w-full" />
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Template Download */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Plantilla de Ejemplo
+          </CardTitle>
+          <CardDescription>
+            Descarga una plantilla Excel con el formato correcto para la carga masiva
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleDownloadTemplate} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Descargar Plantilla
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Upload Results */}
+      {uploadResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {uploadResult.errors > 0 ? (
+                <AlertCircle className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              )}
+              Resultado de la Carga
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{uploadResult.total}</div>
+                <div className="text-sm text-muted-foreground">Total</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{uploadResult.success}</div>
+                <div className="text-sm text-muted-foreground">Exitosos</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{uploadResult.errors}</div>
+                <div className="text-sm text-muted-foreground">Con Errores</div>
+              </div>
+            </div>
+
+            {uploadResult.errorDetails && uploadResult.errorDetails.length > 0 && (
+              <Alert className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p className="font-semibold">Errores encontrados:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {uploadResult.errorDetails.slice(0, 5).map((error, index) => (
+                        <li key={index} className="text-sm">
+                          {error}
+                        </li>
+                      ))}
+                    </ul>
+                    {uploadResult.errorDetails.length > 5 && (
+                      <p className="text-sm text-muted-foreground">
+                        ... y {uploadResult.errorDetails.length - 5} errores más
+                      </p>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

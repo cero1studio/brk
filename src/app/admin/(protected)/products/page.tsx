@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
+import { syncProductImages } from "@/lib/sync-product-images"
 import Image from "next/image"
 import { PlusCircle, Edit3, Trash2, Search, RefreshCw } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -312,9 +313,22 @@ export default function AdminProductsPage() {
           ...data,
           updated_at: new Date().toISOString()
         }
-        const { error } = await supabase.from("products").update(updateData).eq("id", editingProduct.id)
+        
+        console.log("🔍 Debug - Actualizando producto:", {
+          codigo_brk: editingProduct.codigo_brk,
+          updateData: updateData,
+          images: data.images
+        })
+        
+        // Actualizar TODAS las filas con el mismo codigo_brk
+        const { data: updatedRows, error } = await supabase
+          .from("products")
+          .update(updateData)
+          .eq("codigo_brk", editingProduct.codigo_brk)
+          .select()
 
         if (error) {
+          console.error("❌ Error al actualizar:", error)
           toast({
             title: "Error",
             description: "No se pudo actualizar el producto",
@@ -323,9 +337,15 @@ export default function AdminProductsPage() {
           return
         }
 
+        console.log("✅ Productos actualizados:", updatedRows?.length, "filas")
+        console.log("📋 Detalles de actualización:", updatedRows)
+
+        // Refrescar la lista de productos para mostrar los cambios
+        await fetchProducts()
+
         toast({
           title: "Producto actualizado",
-          description: "El producto ha sido actualizado exitosamente",
+          description: `Se actualizaron ${updatedRows?.length || 0} productos con código BRK ${editingProduct.codigo_brk}`,
         })
       } else {
         const { error } = await supabase.from("products").insert([data])

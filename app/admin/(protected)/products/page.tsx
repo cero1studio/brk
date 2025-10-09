@@ -328,42 +328,125 @@ export default function AdminProductsPage() {
       // Generate description: subgrupo + posicion + para + marca + linea + modelo + version
       const generatedDescription = `${subgrupo} ${posicion} para ${marca} ${linea} ${modelo} ${version}`.trim()
 
+      // Función para limpiar y validar campos numéricos
+      const cleanNumericField = (value: any): number | null => {
+        if (value === null || value === undefined || value === "") return null
+        const num = Number(value)
+        return isNaN(num) ? null : num
+      }
+
+      // Limpiar datos antes de crear el objeto final
+      const cleanedData = {
+        ...validation.data,
+        // Limpiar todos los campos numéricos
+        price: cleanNumericField(validation.data.price) || 0,
+        stock: cleanNumericField(validation.data.stock) || 0,
+        ancho_mm: cleanNumericField(validation.data.ancho_mm),
+        largo_mm: cleanNumericField(validation.data.largo_mm),
+        espesor_mm: cleanNumericField(validation.data.espesor_mm),
+        diametro_a_mm: cleanNumericField(validation.data.diametro_a_mm),
+        diametro_interno_a_mm: cleanNumericField(validation.data.diametro_interno_a_mm),
+        diametro_interno_maximo: cleanNumericField(validation.data.diametro_interno_maximo),
+        diametro_orificio_central_c_mm: cleanNumericField(validation.data.diametro_orificio_central_c_mm),
+        espesor_c_mm: cleanNumericField(validation.data.espesor_c_mm),
+        espesor_min_mm: cleanNumericField(validation.data.espesor_min_mm),
+        alto_b_mm: cleanNumericField(validation.data.alto_b_mm),
+        altura_total_d_mm: cleanNumericField(validation.data.altura_total_d_mm),
+        agujeros: cleanNumericField(validation.data.agujeros) || 0,
+        x_juego_pastilla: cleanNumericField(validation.data.x_juego_pastilla) || 0,
+      }
+
       // Add generated fields to data
       const finalData = {
-        ...validation.data,
+        ...cleanedData,
         name: generatedName,
         sku: generatedSKU,
         description: generatedDescription,
         category: subgrupo || "General", // Use subgrupo as category, fallback to "General"
         vendor: "BRK", // Set default vendor
-        price: validation.data.price || 0,
-        stock: validation.data.stock || 0,
       }
 
       console.log("[v0] Generated data:", finalData)
+      console.log("[v0] Campos numéricos limpiados:", {
+        price: finalData.price,
+        stock: finalData.stock,
+        ancho_mm: finalData.ancho_mm,
+        largo_mm: finalData.largo_mm,
+        espesor_mm: finalData.espesor_mm,
+        agujeros: finalData.agujeros,
+        x_juego_pastilla: finalData.x_juego_pastilla
+      })
 
       if (editingProduct) {
         console.log("[v0] Updating product with ID:", editingProduct.id)
+        console.log("[v0] Updating ALL products with codigo_brk:", editingProduct.codigo_brk)
         const updateData = {
           ...finalData,
           updated_at: new Date().toISOString()
         }
-        const { error } = await supabase.from("products").update(updateData).eq("id", editingProduct.id)
+        
+        // Actualizar solo el producto individual
+        const { data: updatedRows, error } = await supabase
+          .from("products")
+          .update(updateData)
+          .eq("id", editingProduct.id)
+          .select()
+
+        // Si hay cambios en las imágenes, sincronizar SOLO las imágenes en todos los productos con el mismo codigo_brk
+        if (data.images && data.images.length > 0) {
+          const { error: imageSyncError } = await supabase
+            .from("products")
+            .update({ images: data.images })
+            .eq("codigo_brk", editingProduct.codigo_brk)
+          
+          if (imageSyncError) {
+            console.error("Error al sincronizar imágenes:", imageSyncError)
+          } else {
+            console.log(`Imágenes sincronizadas para codigo_brk: ${editingProduct.codigo_brk}`)
+          }
+        }
 
         if (error) {
           console.log("[v0] Update error:", error)
+          
+          // Función para obtener mensaje de error más claro
+          const getErrorMessage = (error: any) => {
+            const message = error.message || "Error desconocido"
+            
+            // Errores específicos de validación
+            if (message.includes("invalid input syntax for type numeric")) {
+              return "Error de validación: Hay campos numéricos con valores inválidos. Por favor revisa los campos de medidas y precios."
+            }
+            if (message.includes("duplicate key value")) {
+              return "Error: Ya existe un producto con este código BRK o SKU."
+            }
+            if (message.includes("violates not-null constraint")) {
+              return "Error: Faltan campos obligatorios. Por favor completa todos los campos requeridos."
+            }
+            if (message.includes("violates check constraint")) {
+              return "Error: Algunos valores no cumplen con las restricciones de la base de datos."
+            }
+            
+            return `Error al actualizar el producto: ${message}`
+          }
+          
           toast({
-            title: "Error",
-            description: `No se pudo actualizar el producto: ${error.message}`,
+            title: "Error al actualizar producto",
+            description: getErrorMessage(error),
             variant: "destructive",
           })
           return
         }
 
         console.log("[v0] Product updated successfully")
+        console.log("[v0] Updated rows:", updatedRows?.length)
+        
+        const hasImageSync = data.images && data.images.length > 0
         toast({
           title: "Producto actualizado",
-          description: "El producto ha sido actualizado exitosamente",
+          description: hasImageSync 
+            ? `Producto actualizado. Imágenes sincronizadas en todos los productos con código BRK ${editingProduct.codigo_brk}`
+            : "Producto actualizado exitosamente",
         })
       } else {
         console.log("[v0] Creating new product")
@@ -371,9 +454,31 @@ export default function AdminProductsPage() {
 
         if (error) {
           console.log("[v0] Insert error:", error)
+          
+          // Función para obtener mensaje de error más claro
+          const getErrorMessage = (error: any) => {
+            const message = error.message || "Error desconocido"
+            
+            // Errores específicos de validación
+            if (message.includes("invalid input syntax for type numeric")) {
+              return "Error de validación: Hay campos numéricos con valores inválidos. Por favor revisa los campos de medidas y precios."
+            }
+            if (message.includes("duplicate key value")) {
+              return "Error: Ya existe un producto con este código BRK o SKU."
+            }
+            if (message.includes("violates not-null constraint")) {
+              return "Error: Faltan campos obligatorios. Por favor completa todos los campos requeridos."
+            }
+            if (message.includes("violates check constraint")) {
+              return "Error: Algunos valores no cumplen con las restricciones de la base de datos."
+            }
+            
+            return `Error al crear el producto: ${message}`
+          }
+          
           toast({
-            title: "Error",
-            description: `No se pudo crear el producto: ${error.message}`,
+            title: "Error al crear producto",
+            description: getErrorMessage(error),
             variant: "destructive",
           })
           return
