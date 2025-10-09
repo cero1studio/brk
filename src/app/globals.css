@@ -106,3 +106,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Clases para ocultar/mostrar el catálogo */
+  .catalog-hidden {
+    display: none !important;
+  }
+  
+  .catalog-visible {
+    display: block !important;
+  }
+}

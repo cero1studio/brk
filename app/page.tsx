@@ -193,6 +193,7 @@ function HomePageContent() {
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isPageChanging, setIsPageChanging] = useState(false)
+  const [showCatalog, setShowCatalog] = useState(false)
 
   const searchParamsObj = {
     q: searchParams.get("q") || undefined,
@@ -259,12 +260,90 @@ function HomePageContent() {
     setIsPageChanging(true)
   }
 
+  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const password = (e.target as HTMLFormElement).password.value
+    if (password === "brk2025") {
+      setShowCatalog(true)
+    } else {
+      alert("Contraseña incorrecta")
+    }
+  }
+
+  // Si no está autenticado, mostrar formulario de login
+  if (!showCatalog) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md">
+          {/* Título principal */}
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-white mb-3">
+              ¡Bienvenido a nuestro catálogo!
+            </h2>
+          </div>
+
+          {/* Formulario de acceso */}
+          <div className="bg-gray-900 rounded-xl shadow-2xl p-8 border border-gray-700">
+            <div className="text-center mb-6">
+            </div>
+            
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                  Contraseña de acceso
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Ingresa tu contraseña aquí"
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white placeholder-gray-400"
+                  required
+                />
+              </div>
+              
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-blue-500"
+              >
+                🚀 Acceder
+              </button>
+            </form>
+
+            {/* Información adicional */}
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <div className="text-center">
+                <p className="text-xs text-gray-400 mb-2">Categorías disponibles:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded-full text-xs border border-gray-600">Campanas</span>
+                  <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded-full text-xs border border-gray-600">Cilindros</span>
+                  <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded-full text-xs border border-gray-600">Discos</span>
+                  <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded-full text-xs border border-gray-600">Pastillas</span>
+                  <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded-full text-xs border border-gray-600">Sensores</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <LoadingProvider setIsLoading={setIsLoading}>
       <div className="container mx-auto px-4 py-8">
         {isPageChanging && <ProductsLoadingOverlay />}
 
         <section className="mb-12 text-center">
+          <div className="flex justify-between items-center mb-6">
+            <div></div>
+            <button
+              onClick={() => setShowCatalog(false)}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
           <h1 className="text-4xl md:text-5xl font-headline font-bold mb-3 text-foreground">
             Bienvenido a BRK Performance Brakes
           </h1>

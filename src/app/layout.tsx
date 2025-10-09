@@ -24,9 +24,7 @@ export const metadata: Metadata = {
   title: "BRK Performance Brakes",
   description: "Su proveedor principal de soluciones de frenado de alto rendimiento.",
   icons: {
-    icon: '/Logos_brk-black.ico?v=3',
-    shortcut: '/Logos_brk-black.ico?v=3',
-    apple: '/Logos_brk-black.ico?v=3',
+    icon: '/favicon.ico?v=4',
   },
 }
 
@@ -36,10 +34,19 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   // Log para verificar que el favicon se está configurando
-  console.log('🔍 Favicon configurado:', '/Logos_brk-black.ico?v=3')
+  console.log('🔍 Favicon configurado automáticamente por Next.js')
   
   return (
     <html lang="es" className={cn(inter.variable, spaceGrotesk.variable)}>
+      <head>
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+        <link rel="icon" href="/favicon.ico?v=4" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.ico?v=4" type="image/x-icon" />
+        <link rel="apple-touch-icon" href="/favicon.ico?v=4" />
+        <meta name="msapplication-TileImage" content="/favicon.ico?v=4" />
+      </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
           <CatalogAuthWrapper>
