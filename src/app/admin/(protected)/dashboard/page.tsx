@@ -6,21 +6,28 @@ import { getAllProducts } from "@/lib/bulk-upload-supabase"
 
 async function getDashboardStats() {
   try {
+    console.log("🔍 Obteniendo estadísticas del dashboard...")
     const products = await getAllProducts()
+    console.log(`📊 Productos obtenidos: ${products.length}`)
 
     // Get unique categories
     const categories = new Set(products.map((p) => p.category).filter(Boolean))
+    console.log(`📁 Categorías únicas: ${categories.size}`)
 
     // Get unique brands/marcas
     const marcas = new Set(products.map((p) => p.marca).filter(Boolean))
+    console.log(`🏷️ Marcas únicas: ${marcas.size}`)
 
-    return {
+    const stats = {
       totalProducts: products.length,
       totalCategories: categories.size,
       totalMarcas: marcas.size,
     }
+
+    console.log("✅ Estadísticas calculadas:", stats)
+    return stats
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error)
+    console.error("❌ Error fetching dashboard stats:", error)
     return {
       totalProducts: 0,
       totalCategories: 0,
@@ -31,6 +38,12 @@ async function getDashboardStats() {
 
 export default async function AdminDashboardPage() {
   const { totalProducts, totalCategories, totalMarcas } = await getDashboardStats()
+  
+  console.log("🎯 Dashboard renderizando con datos:", {
+    totalProducts,
+    totalCategories,
+    totalMarcas
+  })
 
   const stats = [
     { title: "Productos Totales", value: totalProducts.toString(), icon: Package, color: "text-gray-300" },

@@ -238,6 +238,26 @@ export async function simpleUpload(
   return uploadProductsToSupabase(products, new Map(), onProgress)
 }
 
+// Get all products for dashboard stats
+export async function getAllProducts(): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching products:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error in getAllProducts:", error)
+    return []
+  }
+}
+
 // Create sample template
 export async function createSampleTemplate(): Promise<void> {
   const sampleData = [
