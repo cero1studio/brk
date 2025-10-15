@@ -109,7 +109,7 @@ export default function BulkUploadPage() {
       console.log(`Parsed ${products.length} products from file`)
 
       // Upload products with ALL fields to database (no images)
-      const result = await uploadProductsToSupabase(products, new Map(), setUploadProgress)
+      const result = await simpleUpload(simpleExcelFile, setUploadProgress)
       console.log("Simple upload completed:", result)
 
       setUploadResult(result)
