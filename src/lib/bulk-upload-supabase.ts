@@ -185,6 +185,10 @@ export async function uploadProductsToSupabase(
   imagesByFolder: Map<string, Blob>,
   onProgress?: (progress: number) => void
 ): Promise<BulkUploadResult> {
+  console.log(`[Bulk Upload] Starting upload of ${products.length} products`)
+  console.log(`[Bulk Upload] Found ${imagesByFolder.size} images in ZIP file`)
+  console.log(`[Bulk Upload] Image folders:`, Array.from(imagesByFolder.keys()))
+  
   const result: BulkUploadResult = {
     success: true,
     message: "Upload completed",
@@ -200,9 +204,13 @@ export async function uploadProductsToSupabase(
     try {
       // Upload images if available
       if (product.codigo_brk && imagesByFolder.has(product.codigo_brk)) {
+        console.log(`[Bulk Upload] Uploading image for codigo_brk: ${product.codigo_brk}`)
         const imageBlob = imagesByFolder.get(product.codigo_brk)!
         const imageUrl = await uploadImageToStorage(product.codigo_brk, imageBlob)
         product.images = [imageUrl]
+        console.log(`[Bulk Upload] Image uploaded successfully: ${imageUrl}`)
+      } else {
+        console.log(`[Bulk Upload] No image found for codigo_brk: ${product.codigo_brk}`)
       }
 
       // Insert product into database

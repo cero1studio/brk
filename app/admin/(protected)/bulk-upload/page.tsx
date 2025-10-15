@@ -76,8 +76,6 @@ export default function BulkUploadPage() {
         })
       }
 
-      // Reload history
-      await loadUploadHistory()
     } catch (error) {
       console.error("Bulk upload error:", error)
       toast({
@@ -111,7 +109,7 @@ export default function BulkUploadPage() {
       console.log(`Parsed ${products.length} products from file`)
 
       // Upload products with ALL fields to database (no images)
-      const result = await simpleUpload(products, setUploadProgress)
+      const result = await uploadProductsToSupabase(products, new Map(), setUploadProgress)
       console.log("Simple upload completed:", result)
 
       setUploadResult(result)
@@ -129,7 +127,6 @@ export default function BulkUploadPage() {
         })
       }
 
-      await loadUploadHistory()
     } catch (error) {
       console.error("Simple upload error:", error)
       toast({
@@ -146,29 +143,7 @@ export default function BulkUploadPage() {
 
   const downloadTemplate = async () => {
     try {
-      const XLSX = await import("xlsx")
-      const template = createSampleTemplate()
-
-      // Convert to Excel format using XLSX
-      const worksheet = XLSX.utils.json_to_sheet(template)
-      const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Productos")
-
-      // Generate Excel file
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      })
-
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "plantilla_productos_brk_completa.xlsx"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
-
+      await createSampleTemplate()
       toast({
         title: "Plantilla descargada",
         description: "La plantilla Excel completa con todos los campos se ha descargado exitosamente",
@@ -319,15 +294,15 @@ export default function BulkUploadPage() {
                     <div className="space-y-2">
                       <p>{uploadResult.message}</p>
                       <div className="flex gap-4 text-sm">
-                        <span>Total: {uploadResult.totalProducts}</span>
-                        <span className="text-green-600">Exitosos: {uploadResult.successfulProducts}</span>
-                        <span className="text-red-600">Fallidos: {uploadResult.failedProducts}</span>
+                        <span>Total: {uploadResult.total}</span>
+                        <span className="text-green-600">Exitosos: {uploadResult.success}</span>
+                        <span className="text-red-600">Fallidos: {uploadResult.errors}</span>
                       </div>
-                      {uploadResult.errors.length > 0 && (
+                      {uploadResult.errorDetails && uploadResult.errorDetails.length > 0 && (
                         <details className="mt-2">
                           <summary className="cursor-pointer text-sm font-medium">Ver errores</summary>
                           <ul className="list-disc list-inside mt-1 text-xs space-y-1">
-                            {uploadResult.errors.map((error, index) => (
+                            {uploadResult.errorDetails.map((error: string, index: number) => (
                               <li key={index}>{error}</li>
                             ))}
                           </ul>
@@ -405,9 +380,9 @@ export default function BulkUploadPage() {
                     <div className="space-y-2">
                       <p>{uploadResult.message}</p>
                       <div className="flex gap-4 text-sm">
-                        <span>Total: {uploadResult.totalProducts}</span>
-                        <span className="text-green-600">Exitosos: {uploadResult.successfulProducts}</span>
-                        <span className="text-red-600">Fallidos: {uploadResult.failedProducts}</span>
+                        <span>Total: {uploadResult.total}</span>
+                        <span className="text-green-600">Exitosos: {uploadResult.success}</span>
+                        <span className="text-red-600">Fallidos: {uploadResult.errors}</span>
                       </div>
                     </div>
                   </AlertDescription>

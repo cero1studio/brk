@@ -195,6 +195,14 @@ function HomePageContent() {
   const [isPageChanging, setIsPageChanging] = useState(false)
   const [showCatalog, setShowCatalog] = useState(false)
 
+  // Verificar si ya está autenticado al cargar la página
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem('brk_catalog_authenticated')
+    if (isAuthenticated === 'true') {
+      setShowCatalog(true)
+    }
+  }, [])
+
   const searchParamsObj = {
     q: searchParams.get("q") || undefined,
     subgrupo: searchParams.get("subgrupo") || undefined,
@@ -265,6 +273,7 @@ function HomePageContent() {
     const password = (e.target as HTMLFormElement).password.value
     if (password === "brk2025") {
       setShowCatalog(true)
+      localStorage.setItem('brk_catalog_authenticated', 'true')
     } else {
       alert("Contraseña incorrecta")
     }
@@ -338,7 +347,10 @@ function HomePageContent() {
           <div className="flex justify-between items-center mb-6">
             <div></div>
             <button
-              onClick={() => setShowCatalog(false)}
+              onClick={() => {
+                setShowCatalog(false)
+                localStorage.removeItem('brk_catalog_authenticated')
+              }}
               className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
             >
               Cerrar Sesión
