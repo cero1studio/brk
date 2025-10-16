@@ -67,11 +67,11 @@ export default function AdminSidebar() {
         ))}
         <Button
           variant="ghost"
-          className="w-full justify-start text-base h-11 px-3 text-red-500 hover:bg-gray-800/10 hover:text-gray-300 group"
+          className="w-full justify-center text-base h-11 px-3 text-red-500 hover:bg-gray-800/10 hover:text-gray-300 group"
           onClick={handleLogout}
+          title="Cerrar Sesión"
         >
-          <LogOut className="mr-3 h-5 w-5 text-red-500 group-hover:text-gray-300" />
-          Cerrar Sesión
+          <LogOut className="h-5 w-5 text-red-500 group-hover:text-gray-300" />
         </Button>
       </div>
       <div className="mt-6 text-center">

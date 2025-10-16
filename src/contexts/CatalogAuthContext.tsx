@@ -19,7 +19,7 @@ export const CatalogAuthProvider = ({ children }: { children: ReactNode }) => {
   console.log("CatalogAuthProvider renderizado - isAuthenticated:", isAuthenticated)
 
   // Contraseña hardcodeada para usuarios del catálogo
-  const CATALOG_PASSWORD = "brk2025"
+  const CATALOG_PASSWORD = "catalogo2025"
 
   useEffect(() => {
     // SIEMPRE empezar como no autenticado

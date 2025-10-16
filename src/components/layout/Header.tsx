@@ -2,12 +2,34 @@
 
 import Link from "next/link"
 import { Button } from "../ui/button"
-import { UserCircle, Sun, Moon } from "lucide-react"
+import { UserCircle, Sun, Moon, LogOut } from "lucide-react"
 import { useTheme } from "../../contexts/ThemeContext"
 import { BrkLogo } from "../BrkLogo"
+import { useState, useEffect } from "react"
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme()
+  const [isCatalogAuthenticated, setIsCatalogAuthenticated] = useState(false)
+
+  // Verificar si el usuario está autenticado en el catálogo
+  useEffect(() => {
+    const checkAuth = () => {
+      const auth = localStorage.getItem('brk_catalog_authenticated')
+      setIsCatalogAuthenticated(auth === 'true')
+    }
+    
+    checkAuth()
+    // Escuchar cambios en localStorage
+    window.addEventListener('storage', checkAuth)
+    return () => window.removeEventListener('storage', checkAuth)
+  }, [])
+
+  const handleCatalogLogout = () => {
+    localStorage.removeItem('brk_catalog_authenticated')
+    setIsCatalogAuthenticated(false)
+    // Recargar la página para volver al login
+    window.location.reload()
+  }
 
   return (
     <header className="bg-card shadow-md sticky top-0 z-50">
@@ -31,6 +53,17 @@ export default function Header() {
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
+          {isCatalogAuthenticated && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleCatalogLogout} 
+              aria-label="Cerrar sesión del catálogo"
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )}
         </nav>
       </div>
     </header>

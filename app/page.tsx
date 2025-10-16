@@ -271,7 +271,7 @@ function HomePageContent() {
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const password = (e.target as HTMLFormElement).password.value
-    if (password === "brk2025") {
+    if (password === "catalogo2025") {
       setShowCatalog(true)
       localStorage.setItem('brk_catalog_authenticated', 'true')
     } else {
@@ -344,18 +344,6 @@ function HomePageContent() {
         {isPageChanging && <ProductsLoadingOverlay />}
 
         <section className="mb-12 text-center">
-          <div className="flex justify-between items-center mb-6">
-            <div></div>
-            <button
-              onClick={() => {
-                setShowCatalog(false)
-                localStorage.removeItem('brk_catalog_authenticated')
-              }}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Cerrar Sesión
-            </button>
-          </div>
           <h1 className="text-4xl md:text-5xl font-headline font-bold mb-3 text-foreground">
             Bienvenido a BRK Performance Brakes
           </h1>
