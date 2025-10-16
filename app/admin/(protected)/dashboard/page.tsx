@@ -2,22 +2,80 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Button } from "../../../../src/components/ui/button"
 import Link from "next/link"
 import { Package, FolderPlus, Settings, Tag } from "lucide-react"
-import { getAllProducts } from "../../../../src/lib/bulk-upload-supabase"
+import { createClient } from "@supabase/supabase-js"
 
 async function getDashboardStats() {
   try {
-    const products = await getAllProducts()
+    console.log("🔍 Fetching dashboard stats...")
+    
+    // Create server-side Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    console.log("🔧 Environment check:")
+    console.log("- Supabase URL exists:", !!supabaseUrl)
+    console.log("- Supabase Key exists:", !!supabaseAnonKey)
+    console.log("- Supabase URL:", supabaseUrl?.substring(0, 30) + "...")
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("❌ Supabase credentials not configured")
+      return {
+        totalProducts: 0,
+        totalCategories: 0,
+        totalMarcas: 0,
+      }
+    }
 
-    const categories = new Set(products.map((p) => p.category).filter(Boolean))
-    const marcas = new Set(products.map((p) => p.marca).filter(Boolean))
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    console.log("📊 Querying products from database...")
+    
+    // First, let's try a simple count query
+    const { count, error: countError } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+    
+    if (countError) {
+      console.error("❌ Error counting products:", countError)
+      return {
+        totalProducts: 0,
+        totalCategories: 0,
+        totalMarcas: 0,
+      }
+    }
+    
+    console.log(`📊 Total products count: ${count}`)
+    
+    // Now get the actual data
+    const { data: products, error } = await supabase
+      .from("products")
+      .select("marca, subgrupo")
+      .limit(1000) // Limit to avoid memory issues
 
-    return {
-      totalProducts: products.length,
+    if (error) {
+      console.error("❌ Error fetching products:", error)
+      return {
+        totalProducts: count || 0,
+        totalCategories: 0,
+        totalMarcas: 0,
+      }
+    }
+
+    console.log(`✅ Found ${products?.length || 0} products in query`)
+    
+    const categories = new Set(products?.map((p) => p.subgrupo).filter(Boolean) || [])
+    const marcas = new Set(products?.map((p) => p.marca).filter(Boolean) || [])
+
+    const stats = {
+      totalProducts: count || 0,
       totalCategories: categories.size,
       totalMarcas: marcas.size,
     }
+    
+    console.log("📈 Dashboard stats:", stats)
+    return stats
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error)
+    console.error("❌ Error fetching dashboard stats:", error)
     return {
       totalProducts: 0,
       totalCategories: 0,
@@ -27,7 +85,9 @@ async function getDashboardStats() {
 }
 
 export default async function AdminDashboardPage() {
+  console.log("🚀 AdminDashboardPage: Starting to fetch stats...")
   const { totalProducts, totalCategories, totalMarcas } = await getDashboardStats()
+  console.log("📊 AdminDashboardPage: Received stats:", { totalProducts, totalCategories, totalMarcas })
 
   const stats = [
     { title: "Productos Totales", value: totalProducts.toString(), icon: Package, color: "text-gray-300" },
@@ -109,6 +169,9 @@ export default async function AdminDashboardPage() {
             <li className="text-sm text-muted-foreground">Sistema conectado a base de datos Supabase.</li>
             <li className="text-sm text-muted-foreground">Carga masiva de productos disponible.</li>
             <li className="text-sm text-muted-foreground">Gestión de imágenes en Storage habilitada.</li>
+            <li className="text-sm text-muted-foreground">
+              <strong>Debug:</strong> Productos: {totalProducts}, Categorías: {totalCategories}, Marcas: {totalMarcas}
+            </li>
           </ul>
         </CardContent>
       </Card>

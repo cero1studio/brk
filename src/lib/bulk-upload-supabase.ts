@@ -164,9 +164,15 @@ export async function parseZipFile(file: File): Promise<Map<string, Blob>> {
 
 // Upload image to Supabase Storage
 async function uploadImageToStorage(folderName: string, imageBlob: Blob): Promise<string> {
+  console.log(`[Image Upload] Starting upload for: ${folderName}`)
+  console.log(`[Image Upload] Blob size: ${imageBlob.size} bytes`)
+  console.log(`[Image Upload] Blob type: ${imageBlob.type}`)
+  
   // Use same bucket and naming convention as individual upload
   const timestamp = Date.now()
   const fileName = `product_${timestamp}_${folderName}.webp`
+  
+  console.log(`[Image Upload] Uploading to bucket "products" with filename: ${fileName}`)
   
   const { data, error } = await supabase.storage
     .from("products")  // Same bucket as individual upload
@@ -176,13 +182,17 @@ async function uploadImageToStorage(folderName: string, imageBlob: Blob): Promis
     })
 
   if (error) {
+    console.error(`[Image Upload] Upload error:`, error)
     throw new Error(`Error uploading image: ${error.message}`)
   }
+
+  console.log(`[Image Upload] Upload successful, data:`, data)
 
   const { data: { publicUrl } } = supabase.storage
     .from("products")  // Same bucket as individual upload
     .getPublicUrl(fileName)
 
+  console.log(`[Image Upload] Generated public URL: ${publicUrl}`)
   return publicUrl
 }
 
@@ -227,43 +237,49 @@ export async function uploadProductsToSupabase(
         console.log(`[Bulk Upload] Product images will be empty:`, product.images)
       }
 
-      // Try to insert first, if duplicate then update
-      console.log(`[Bulk Upload] Inserting product with images:`, product.images)
-      console.log(`[Bulk Upload] Product object before insert:`, {
+      // Check if product exists first, then insert or update accordingly
+      console.log(`[Bulk Upload] Checking if product exists: ${product.codigo_brk}`)
+      const { data: existingProduct, error: checkError } = await supabase
+        .from("products")
+        .select("id")
+        .eq("codigo_brk", product.codigo_brk)
+        .limit(1)
+      
+      if (checkError) {
+        console.error(`[Bulk Upload] Error checking existing product:`, checkError)
+        throw new Error(checkError.message)
+      }
+      
+      console.log(`[Bulk Upload] Product object:`, {
         codigo_brk: product.codigo_brk,
         name: product.name,
         images: product.images,
         imagesType: typeof product.images,
         imagesLength: product.images?.length
       })
-      const { error: insertError } = await supabase.from("products").insert([product])
       
-      if (insertError) {
-        // If it's a duplicate key error, try to update
-        if (insertError.code === '23505' || insertError.message.includes('duplicate')) {
-          console.log(`[Bulk Upload] Duplicate detected, updating product ${product.codigo_brk}`)
-          console.log(`[Bulk Upload] Product object before update:`, {
-            codigo_brk: product.codigo_brk,
-            name: product.name,
-            images: product.images,
-            imagesType: typeof product.images,
-            imagesLength: product.images?.length
-          })
-          const { error: updateError } = await supabase
-            .from("products")
-            .update(product)
-            .eq("codigo_brk", product.codigo_brk)
-          
-          if (updateError) {
-            console.error(`[Bulk Upload] Update error for product ${product.codigo_brk}:`, updateError)
-            throw new Error(updateError.message)
-          }
-          console.log(`[Bulk Upload] Product ${product.codigo_brk} updated successfully`)
-        } else {
+      if (existingProduct && existingProduct.length > 0) {
+        // Product exists, update it
+        console.log(`[Bulk Upload] Product exists, updating: ${product.codigo_brk}`)
+        const { error: updateError } = await supabase
+          .from("products")
+          .update(product)
+          .eq("codigo_brk", product.codigo_brk)
+        
+        if (updateError) {
+          console.error(`[Bulk Upload] Update error for product ${product.codigo_brk}:`, updateError)
+          throw new Error(updateError.message)
+        }
+        console.log(`[Bulk Upload] Product ${product.codigo_brk} updated successfully`)
+      } else {
+        // Product doesn't exist, insert it
+        console.log(`[Bulk Upload] Product doesn't exist, inserting: ${product.codigo_brk}`)
+        const { error: insertError } = await supabase.from("products").insert([product])
+        
+        if (insertError) {
           console.error(`[Bulk Upload] Insert error for product ${product.codigo_brk}:`, insertError)
           throw new Error(insertError.message)
         }
-      } else {
         console.log(`[Bulk Upload] Product ${product.codigo_brk} inserted successfully`)
       }
 
