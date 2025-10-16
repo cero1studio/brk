@@ -164,23 +164,26 @@ export async function parseZipFile(file: File): Promise<Map<string, Blob>> {
 
 // Upload image to Supabase Storage
 async function uploadImageToStorage(folderName: string, imageBlob: Blob): Promise<string> {
-  const fileName = `${folderName}/image_${Date.now()}.webp`
+  // Use same bucket and naming convention as individual upload
+  const timestamp = Date.now()
+  const fileName = `product_${timestamp}_${folderName}.webp`
+  
   const { data, error } = await supabase.storage
-    .from("product-images")
+    .from("products")  // Same bucket as individual upload
     .upload(fileName, imageBlob, {
       contentType: "image/webp",
-      upsert: false,
+      upsert: true,  // Allow overwrite like individual upload
     })
 
-    if (error) {
+  if (error) {
     throw new Error(`Error uploading image: ${error.message}`)
   }
 
   const { data: { publicUrl } } = supabase.storage
-    .from("product-images")
+    .from("products")  // Same bucket as individual upload
     .getPublicUrl(fileName)
 
-    return publicUrl
+  return publicUrl
 }
 
 // Upload products to Supabase
@@ -207,14 +210,21 @@ export async function uploadProductsToSupabase(
     
     try {
       // Upload images if available
+      console.log(`[Bulk Upload] Checking images for codigo_brk: ${product.codigo_brk}`)
+      console.log(`[Bulk Upload] Available image codes:`, Array.from(imagesByFolder.keys()))
+      console.log(`[Bulk Upload] Has image for ${product.codigo_brk}:`, imagesByFolder.has(product.codigo_brk))
+      
       if (product.codigo_brk && imagesByFolder.has(product.codigo_brk)) {
         console.log(`[Bulk Upload] Uploading image for codigo_brk: ${product.codigo_brk}`)
         const imageBlob = imagesByFolder.get(product.codigo_brk)!
+        console.log(`[Bulk Upload] Image blob size:`, imageBlob.size, 'bytes')
         const imageUrl = await uploadImageToStorage(product.codigo_brk, imageBlob)
-              product.images = [imageUrl]
+        product.images = [imageUrl]
         console.log(`[Bulk Upload] Image uploaded successfully: ${imageUrl}`)
+        console.log(`[Bulk Upload] Product images array:`, product.images)
       } else {
         console.log(`[Bulk Upload] No image found for codigo_brk: ${product.codigo_brk}`)
+        console.log(`[Bulk Upload] Product images will be empty:`, product.images)
       }
 
       // Try to insert first, if duplicate then update
