@@ -27,8 +27,8 @@ export default function Header() {
   const handleCatalogLogout = () => {
     localStorage.removeItem('brk_catalog_authenticated')
     setIsCatalogAuthenticated(false)
-    // Recargar la página para volver al login
-    window.location.reload()
+    // Disparar un evento personalizado para notificar a la página principal
+    window.dispatchEvent(new CustomEvent('catalogLogout'))
   }
 
   return (

@@ -203,6 +203,16 @@ function HomePageContent() {
     }
   }, [])
 
+  // Escuchar el evento de logout desde el header
+  useEffect(() => {
+    const handleCatalogLogout = () => {
+      setShowCatalog(false)
+    }
+
+    window.addEventListener('catalogLogout', handleCatalogLogout)
+    return () => window.removeEventListener('catalogLogout', handleCatalogLogout)
+  }, [])
+
   const searchParamsObj = {
     q: searchParams.get("q") || undefined,
     subgrupo: searchParams.get("subgrupo") || undefined,
