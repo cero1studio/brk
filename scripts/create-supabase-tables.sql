@@ -58,6 +58,9 @@ CREATE INDEX IF NOT EXISTS idx_products_linea ON products(linea);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 
+-- Unique constraint on codigo_brk for upsert operations
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_codigo_brk_unique ON products(codigo_brk);
+
 -- Composite index for finding unique combinations
 CREATE INDEX IF NOT EXISTS idx_products_unique_combo ON products(codigo_brk, modelo, linea, version);
 

@@ -217,10 +217,10 @@ export async function uploadProductsToSupabase(
         console.log(`[Bulk Upload] No image found for codigo_brk: ${product.codigo_brk}`)
       }
 
-      // Upsert product into database (insert or update)
+      // Insert or update product based on codigo_brk
       console.log(`[Bulk Upload] Upserting product with images:`, product.images)
       const { error } = await supabase.from("products").upsert([product], {
-        onConflict: 'codigo_brk,marca,linea,modelo,posicion,version'
+        onConflict: 'codigo_brk'
       })
       
       if (error) {
