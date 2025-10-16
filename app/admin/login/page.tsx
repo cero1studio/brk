@@ -14,10 +14,30 @@ import Link from "next/link"
 export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const { login, isLoading: authLoading } = useAuth()
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  
+  // Usar try-catch para manejar errores del AuthContext
+  let authContext
+  try {
+    authContext = useAuth()
+  } catch (err) {
+    console.error("Error loading AuthContext:", err)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Error de Autenticación</h1>
+          <p className="text-gray-600 mb-4">No se pudo cargar el sistema de autenticación.</p>
+          <Link href="/" className="text-blue-500 hover:underline">
+            Volver al sitio principal
+          </Link>
+        </div>
+      </div>
+    )
+  }
+  
+  const { login, isLoading: authLoading } = authContext
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
