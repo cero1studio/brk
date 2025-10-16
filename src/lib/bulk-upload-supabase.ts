@@ -118,8 +118,8 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
             product.vendor = "BRK"
             product.images = [] // Initialize images array
 
-            return product
-          })
+          return product
+        })
 
         resolve(products)
       } catch (error) {
@@ -137,9 +137,9 @@ export async function parseZipFile(file: File): Promise<Map<string, Blob>> {
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
-        const zip = new JSZip()
+  const zip = new JSZip()
         const zipData = await zip.loadAsync(e.target?.result as ArrayBuffer)
-        const imagesByFolder = new Map<string, Blob>()
+  const imagesByFolder = new Map<string, Blob>()
 
         for (const [filename, file] of Object.entries(zipData.files)) {
           if (!file.dir && /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)) {
@@ -172,7 +172,7 @@ async function uploadImageToStorage(folderName: string, imageBlob: Blob): Promis
       upsert: false,
     })
 
-  if (error) {
+    if (error) {
     throw new Error(`Error uploading image: ${error.message}`)
   }
 
@@ -180,7 +180,7 @@ async function uploadImageToStorage(folderName: string, imageBlob: Blob): Promis
     .from("product-images")
     .getPublicUrl(fileName)
 
-  return publicUrl
+    return publicUrl
 }
 
 // Upload products to Supabase
@@ -192,9 +192,9 @@ export async function uploadProductsToSupabase(
   console.log(`[Bulk Upload] Starting upload of ${products.length} products`)
   console.log(`[Bulk Upload] Found ${imagesByFolder.size} images in ZIP file`)
   console.log(`[Bulk Upload] Image folders:`, Array.from(imagesByFolder.keys()))
-  
+
   const result: BulkUploadResult = {
-    success: true,
+      success: true,
     message: "Upload completed",
     total: products.length,
     success: 0,
@@ -211,22 +211,24 @@ export async function uploadProductsToSupabase(
         console.log(`[Bulk Upload] Uploading image for codigo_brk: ${product.codigo_brk}`)
         const imageBlob = imagesByFolder.get(product.codigo_brk)!
         const imageUrl = await uploadImageToStorage(product.codigo_brk, imageBlob)
-        product.images = [imageUrl]
+              product.images = [imageUrl]
         console.log(`[Bulk Upload] Image uploaded successfully: ${imageUrl}`)
       } else {
         console.log(`[Bulk Upload] No image found for codigo_brk: ${product.codigo_brk}`)
       }
 
-      // Insert product into database
-      console.log(`[Bulk Upload] Inserting product with images:`, product.images)
-      const { error } = await supabase.from("products").insert([product])
+      // Upsert product into database (insert or update)
+      console.log(`[Bulk Upload] Upserting product with images:`, product.images)
+      const { error } = await supabase.from("products").upsert([product], {
+        onConflict: 'codigo_brk,marca,linea,modelo,posicion,version'
+      })
       
       if (error) {
         console.error(`[Bulk Upload] Database error for product ${product.codigo_brk}:`, error)
         throw new Error(error.message)
       }
       
-      console.log(`[Bulk Upload] Product ${product.codigo_brk} inserted successfully`)
+      console.log(`[Bulk Upload] Product ${product.codigo_brk} upserted successfully`)
 
       result.success++
     } catch (error) {
@@ -240,7 +242,7 @@ export async function uploadProductsToSupabase(
   }
 
   result.success = result.success === products.length
-  result.message = `Procesados ${result.total} productos. ${result.success} exitosos, ${result.errors} con errores.`
+  result.message = `Procesados ${result.total} productos. ${result.success} exitosos (insertados/actualizados), ${result.errors} con errores.`
 
   return result
 }
