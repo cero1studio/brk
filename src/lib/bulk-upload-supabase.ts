@@ -116,6 +116,7 @@ export async function parseExcelFile(file: File): Promise<Product[]> {
             product.sku = `${product.codigo_brk}${product.marca}${product.linea}${product.modelo}`.replace(/\s+/g, "").toUpperCase()
             product.category = product.subgrupo || "General"
             product.vendor = "BRK"
+            product.images = [] // Initialize images array
 
             return product
           })
@@ -217,11 +218,15 @@ export async function uploadProductsToSupabase(
       }
 
       // Insert product into database
+      console.log(`[Bulk Upload] Inserting product with images:`, product.images)
       const { error } = await supabase.from("products").insert([product])
       
       if (error) {
+        console.error(`[Bulk Upload] Database error for product ${product.codigo_brk}:`, error)
         throw new Error(error.message)
       }
+      
+      console.log(`[Bulk Upload] Product ${product.codigo_brk} inserted successfully`)
 
       result.success++
     } catch (error) {
