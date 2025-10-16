@@ -87,37 +87,15 @@ export default function ProductFilters() {
       refFmsiOem: searchParams.get("refFmsiOem") || "all_refs_fmsi_oem",
     }
     setFilters(currentFilters)
-    loadFilterOptions(currentFilters)
+    loadFilterOptions()
   }, [searchParams.toString()])
 
   const loadFilterOptions = async (currentFilters: FilterState = filters) => {
     try {
-      let query = supabase.from("products").select("subgrupo, marca, linea, modelo, posicion, codigo_brk, ref_fmsi_oem")
-
-      // Apply progressive filtering based on current selections
-      if (currentFilters.subgrupo && currentFilters.subgrupo !== "all_subgrupos") {
-        query = query.eq("subgrupo", currentFilters.subgrupo)
-      }
-      if (currentFilters.marca && currentFilters.marca !== "all_marcas") {
-        query = query.eq("marca", currentFilters.marca)
-      }
-      if (currentFilters.linea && currentFilters.linea !== "all_lineas") {
-        query = query.eq("linea", currentFilters.linea)
-      }
-      if (currentFilters.modelo && currentFilters.modelo !== "all_modelos") {
-        query = query.eq("modelo", currentFilters.modelo)
-      }
-      if (currentFilters.posicion && currentFilters.posicion !== "all_posiciones") {
-        query = query.eq("posicion", currentFilters.posicion)
-      }
-      if (currentFilters.codigoBrk && currentFilters.codigoBrk !== "all_codigos_brk") {
-        query = query.eq("codigo_brk", currentFilters.codigoBrk)
-      }
-      if (currentFilters.refFmsiOem && currentFilters.refFmsiOem !== "all_refs_fmsi_oem") {
-        query = query.eq("ref_fmsi_oem", currentFilters.refFmsiOem)
-      }
-
-      const { data: products, error } = await query
+      // Always load ALL available options without filtering
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("subgrupo, marca, linea, modelo, posicion, codigo_brk, ref_fmsi_oem")
 
       if (error) throw error
 
@@ -185,8 +163,7 @@ export default function ProductFilters() {
 
     router.push(`/?${params.toString()}`)
 
-    // Reload filter options with new filters
-    loadFilterOptions(newFilters)
+    // No need to reload filter options since we always show all available options
   }
 
   const handleClearFilters = () => {
@@ -208,7 +185,7 @@ export default function ProductFilters() {
 
     router.push(`/?${params.toString()}`)
 
-    loadFilterOptions(initialFilterState)
+    // No need to reload filter options since we always show all available options
   }
 
   const filterFieldsRow1 = [
