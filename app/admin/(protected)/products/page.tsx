@@ -84,6 +84,7 @@ export default function AdminProductsPage() {
     subgrupo: "",
     marca: "",
   })
+  const [subgrupoOptions, setSubgrupoOptions] = useState<string[]>([])
   const { toast } = useToast()
 
   const form = useForm<ProductFormValues>({
@@ -563,8 +564,30 @@ export default function AdminProductsPage() {
     setIsModalOpen(true)
   }
 
+  // Función para cargar opciones de subgrupo desde la base de datos
+  const loadSubgrupoOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("subgrupo")
+        .not("subgrupo", "is", null)
+
+      if (error) {
+        console.error("Error loading subgrupo options:", error)
+        return
+      }
+
+      // Obtener subgrupos únicos y ordenarlos
+      const uniqueSubgrupos = [...new Set(data?.map(item => item.subgrupo).filter(Boolean))].sort()
+      setSubgrupoOptions(uniqueSubgrupos)
+    } catch (error) {
+      console.error("Error loading subgrupo options:", error)
+    }
+  }
+
   useEffect(() => {
     fetchProducts()
+    loadSubgrupoOptions()
   }, [currentPage, filters])
 
   return (
@@ -613,16 +636,11 @@ export default function AdminProductsPage() {
                           className="w-full px-3 py-2 bg-input border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                         >
                           <option value="">Seleccionar subgrupo</option>
-                          <option value="PASTILLAS">Pastillas</option>
-                          <option value="DISCOS">Discos</option>
-                          <option value="TAMBORES">Tambores</option>
-                          <option value="LIQUIDOS">Líquidos</option>
-                          <option value="FILTROS">Filtros</option>
-                          <option value="SENSORES">Sensores</option>
-                          <option value="CABLES">Cables</option>
-                          <option value="BOMBAS">Bombas</option>
-                          <option value="MANGUERAS">Mangueras</option>
-                          <option value="OTROS">Otros</option>
+                          {subgrupoOptions.map((subgrupo) => (
+                            <option key={subgrupo} value={subgrupo}>
+                              {subgrupo}
+                            </option>
+                          ))}
                         </select>
                       </div>
 
