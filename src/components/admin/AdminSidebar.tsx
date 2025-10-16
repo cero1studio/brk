@@ -17,10 +17,13 @@ const settingsNavItems = [{ href: "/admin/settings", label: "Configuración", ic
 
 export default function AdminSidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { logout, isAuthenticated } = useAuth()
   const router = useRouter()
 
+  console.log('🔍 AdminSidebar: isAuthenticated =', isAuthenticated)
+
   const handleLogout = () => {
+    console.log('🚪 AdminSidebar: Logout clicked')
     logout()
   }
 
@@ -65,14 +68,16 @@ export default function AdminSidebar() {
             </Link>
           </Button>
         ))}
-        <Button
-          variant="ghost"
-          className="w-full justify-center text-base h-11 px-3 text-red-500 hover:bg-gray-800/10 hover:text-gray-300 group"
-          onClick={handleLogout}
-          title="Cerrar Sesión"
-        >
-          <LogOut className="h-5 w-5 text-red-500 group-hover:text-gray-300" />
-        </Button>
+        {isAuthenticated && (
+          <Button
+            variant="ghost"
+            className="w-full justify-center text-base h-11 px-3 text-red-500 hover:bg-gray-800/10 hover:text-gray-300 group"
+            onClick={handleLogout}
+            title="Cerrar Sesión"
+          >
+            <LogOut className="h-5 w-5 text-red-500 group-hover:text-gray-300" />
+          </Button>
+        )}
       </div>
       <div className="mt-6 text-center">
         <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} BRK Performance Brakes</p>
