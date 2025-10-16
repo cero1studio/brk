@@ -229,12 +229,26 @@ export async function uploadProductsToSupabase(
 
       // Try to insert first, if duplicate then update
       console.log(`[Bulk Upload] Inserting product with images:`, product.images)
+      console.log(`[Bulk Upload] Product object before insert:`, {
+        codigo_brk: product.codigo_brk,
+        name: product.name,
+        images: product.images,
+        imagesType: typeof product.images,
+        imagesLength: product.images?.length
+      })
       const { error: insertError } = await supabase.from("products").insert([product])
       
       if (insertError) {
         // If it's a duplicate key error, try to update
         if (insertError.code === '23505' || insertError.message.includes('duplicate')) {
           console.log(`[Bulk Upload] Duplicate detected, updating product ${product.codigo_brk}`)
+          console.log(`[Bulk Upload] Product object before update:`, {
+            codigo_brk: product.codigo_brk,
+            name: product.name,
+            images: product.images,
+            imagesType: typeof product.images,
+            imagesLength: product.images?.length
+          })
           const { error: updateError } = await supabase
             .from("products")
             .update(product)
