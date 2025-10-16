@@ -49,13 +49,18 @@ export default function BulkUploadPage() {
     try {
       // Parse Excel file
       const products = await parseExcelFile(excelFile)
-      console.log(`Parsed ${products.length} products from Excel file`)
+      console.log(`[Bulk Upload] Parsed ${products.length} products from Excel file`)
+      console.log(`[Bulk Upload] Product codigo_brk values:`, products.map(p => p.codigo_brk).slice(0, 10))
 
       // Parse ZIP file if provided
       let imagesByFolder = new Map<string, Blob>()
       if (zipFile) {
+        console.log(`[Bulk Upload] Processing ZIP file: ${zipFile.name}`)
         imagesByFolder = await parseZipFile(zipFile)
-        console.log(`Found ${imagesByFolder.size} images in ZIP file`)
+        console.log(`[Bulk Upload] Found ${imagesByFolder.size} images in ZIP file`)
+        console.log(`[Bulk Upload] ZIP folders:`, Array.from(imagesByFolder.keys()))
+      } else {
+        console.log(`[Bulk Upload] No ZIP file provided`)
       }
 
       // Upload products with ALL fields to database
