@@ -143,8 +143,11 @@ export async function parseZipFile(file: File): Promise<Map<string, Blob>> {
         for (const [filename, file] of Object.entries(zipData.files)) {
           if (!file.dir && /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)) {
             const blob = await file.async("blob")
-            const folderName = filename.split("/")[0]
-            imagesByFolder.set(folderName, blob)
+            // Extract codigo_brk from filename (e.g., "05P058.webp" -> "05P058")
+            const codigoBrk = filename.split("/").pop()?.replace(/\.(jpg|jpeg|png|gif|webp)$/i, "") || ""
+            if (codigoBrk) {
+              imagesByFolder.set(codigoBrk, blob)
+            }
           }
         }
 
