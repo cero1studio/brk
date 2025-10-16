@@ -217,18 +217,31 @@ export async function uploadProductsToSupabase(
         console.log(`[Bulk Upload] No image found for codigo_brk: ${product.codigo_brk}`)
       }
 
-      // Insert or update product based on codigo_brk
-      console.log(`[Bulk Upload] Upserting product with images:`, product.images)
-      const { error } = await supabase.from("products").upsert([product], {
-        onConflict: 'codigo_brk'
-      })
+      // Try to insert first, if duplicate then update
+      console.log(`[Bulk Upload] Inserting product with images:`, product.images)
+      const { error: insertError } = await supabase.from("products").insert([product])
       
-      if (error) {
-        console.error(`[Bulk Upload] Database error for product ${product.codigo_brk}:`, error)
-        throw new Error(error.message)
+      if (insertError) {
+        // If it's a duplicate key error, try to update
+        if (insertError.code === '23505' || insertError.message.includes('duplicate')) {
+          console.log(`[Bulk Upload] Duplicate detected, updating product ${product.codigo_brk}`)
+          const { error: updateError } = await supabase
+            .from("products")
+            .update(product)
+            .eq("codigo_brk", product.codigo_brk)
+          
+          if (updateError) {
+            console.error(`[Bulk Upload] Update error for product ${product.codigo_brk}:`, updateError)
+            throw new Error(updateError.message)
+          }
+          console.log(`[Bulk Upload] Product ${product.codigo_brk} updated successfully`)
+        } else {
+          console.error(`[Bulk Upload] Insert error for product ${product.codigo_brk}:`, insertError)
+          throw new Error(insertError.message)
+        }
+      } else {
+        console.log(`[Bulk Upload] Product ${product.codigo_brk} inserted successfully`)
       }
-      
-      console.log(`[Bulk Upload] Product ${product.codigo_brk} upserted successfully`)
 
       result.success++
     } catch (error) {
