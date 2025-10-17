@@ -28,12 +28,25 @@ export default function BulkUploadPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null)
+  const [uploadLogs, setUploadLogs] = useState<string[]>([])
 
-
+  // Function to add logs to the interface
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString()
+    const logMessage = `[${timestamp}] ${message}`
+    setUploadLogs(prev => [...prev, logMessage])
+    console.log(logMessage) // Also log to console
+  }
 
   // Handle bulk upload (Excel + ZIP)
   const handleBulkUpload = async () => {
+    setUploadLogs([]) // Clear previous logs
+    addLog(`🚀 ===== INICIANDO CARGA MASIVA =====`)
+    addLog(`📁 Archivo Excel: ${excelFile?.name || 'No seleccionado'}`)
+    addLog(`📦 Archivo ZIP: ${zipFile?.name || 'No seleccionado'}`)
+    
     if (!excelFile) {
+      addLog(`❌ No se seleccionó archivo Excel`)
       toast({
         title: "Error",
         description: "Por favor selecciona un archivo Excel",
@@ -42,38 +55,48 @@ export default function BulkUploadPage() {
       return
     }
 
+    addLog(`✅ Iniciando proceso de carga...`)
     setIsUploading(true)
     setUploadProgress(0)
     setUploadResult(null)
 
     try {
       // Parse Excel file
+      addLog(`📊 Paso 1: Procesando archivo Excel...`)
       const products = await parseExcelFile(excelFile)
-      console.log(`[Bulk Upload] Parsed ${products.length} products from Excel file`)
-      console.log(`[Bulk Upload] Product codigo_brk values:`, products.map(p => p.codigo_brk).slice(0, 10))
+      addLog(`✅ Procesados ${products.length} productos del archivo Excel`)
+      addLog(`📋 Códigos BRK encontrados: ${products.map(p => p.codigo_brk).slice(0, 10).join(', ')}`)
 
       // Parse ZIP file if provided
       let imagesByFolder = new Map<string, Blob>()
       if (zipFile) {
-        console.log(`[Bulk Upload] Processing ZIP file: ${zipFile.name}`)
+        addLog(`📦 Paso 2: Procesando archivo ZIP: ${zipFile.name}`)
         imagesByFolder = await parseZipFile(zipFile)
-        console.log(`[Bulk Upload] Found ${imagesByFolder.size} images in ZIP file`)
-        console.log(`[Bulk Upload] ZIP folders:`, Array.from(imagesByFolder.keys()))
+        addLog(`✅ Encontradas ${imagesByFolder.size} imágenes en el archivo ZIP`)
+        addLog(`📋 Referencias de imágenes: ${Array.from(imagesByFolder.keys()).slice(0, 10).join(', ')}`)
       } else {
-        console.log(`[Bulk Upload] No ZIP file provided`)
+        addLog(`⚠️ No se proporcionó archivo ZIP`)
       }
 
       // Upload products with ALL fields to database
-      const result = await uploadProductsToSupabase(products, imagesByFolder, setUploadProgress)
+      addLog(`🚀 Paso 3: Iniciando carga a base de datos...`)
+      const result = await uploadProductsToSupabase(products, imagesByFolder, setUploadProgress, addLog)
 
       setUploadResult(result)
+      addLog(`✅ Carga completada!`)
+      addLog(`📊 Resultado: ${result.success ? 'Éxito total' : 'Éxito parcial'}`)
+      addLog(`📈 Productos procesados: ${result.total}`)
+      addLog(`✅ Exitosos: ${result.success}`)
+      addLog(`❌ Errores: ${result.errors}`)
 
       if (result.success) {
+        addLog(`🎉 ¡ÉXITO! Todos los productos cargados correctamente`)
         toast({
           title: "¡Éxito!",
           description: result.message,
         })
       } else {
+        addLog(`⚠️ ÉXITO PARCIAL - Algunos errores ocurrieron`)
         toast({
           title: "Carga parcial",
           description: result.message,
@@ -82,13 +105,14 @@ export default function BulkUploadPage() {
       }
 
     } catch (error) {
-      console.error("Bulk upload error:", error)
+      addLog(`❌ ERROR: ${(error as Error).message}`)
       toast({
         title: "Error",
         description: (error as Error).message,
         variant: "destructive",
       })
     } finally {
+      addLog(`🏁 Proceso finalizado`)
       setIsUploading(false)
     }
   }
@@ -193,7 +217,7 @@ export default function BulkUploadPage() {
               </CardTitle>
               <CardDescription>
                 Sube un archivo Excel (.xlsx) con los datos de productos y un ZIP con todas las imágenes en la carpeta
-                raíz. Las imágenes deben tener el nombre del CÓDIGOBRK + .webp
+                raíz. Las imágenes deben tener el nombre del REF BRK + .webp
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -205,7 +229,7 @@ export default function BulkUploadPage() {
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Archivo Excel</p>
                       <p className="text-xs text-muted-foreground">
-                        Debe contener TODOS los campos: SUBGRUPO, CÓDIGOBRK (requeridos) + todos los demás campos
+                        Debe contener TODOS los campos: SUBGRUPO, CÓDIGOBRK, REF BRK (requeridos) + todos los demás campos
                       </p>
                       <input
                         type="file"
@@ -258,16 +282,16 @@ export default function BulkUploadPage() {
                   <strong>Estructura requerida:</strong>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                     <li>
-                      <strong>Excel:</strong> Debe contener SUBGRUPO y CÓDIGOBRK (obligatorios)
+                      <strong>Excel:</strong> Debe contener SUBGRUPO, CÓDIGOBRK y REF BRK (obligatorios)
                     </li>
                     <li>
                       <strong>ZIP:</strong> Todas las imágenes en la carpeta raíz (sin subcarpetas)
                     </li>
                     <li>
-                      <strong>Imágenes:</strong> Nombre del archivo debe ser CÓDIGOBRK.webp
+                      <strong>Imágenes:</strong> Nombre del archivo debe ser REF BRK.webp
                     </li>
                     <li>
-                      <strong>Ejemplo:</strong> BRK001.webp, BRK002.webp, 32662.webp
+                      <strong>Ejemplo:</strong> REF001.webp, REF002.webp, REF003.webp
                     </li>
                     <li>
                       <strong>Nota:</strong> Si hay imágenes duplicadas, se sobrescribirán automáticamente
@@ -284,6 +308,29 @@ export default function BulkUploadPage() {
                     <span>{uploadProgress.toFixed(2)}%</span>
                   </div>
                   <Progress value={uploadProgress} />
+                </div>
+              )}
+
+              {/* Upload Logs */}
+              {uploadLogs.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Logs en tiempo real</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setUploadLogs([])}
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
+                  <div className="bg-gray-900 text-green-400 p-4 rounded-lg h-80 overflow-y-auto font-mono text-xs">
+                    {uploadLogs.map((log, index) => (
+                      <div key={index} className="mb-1">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -370,6 +417,29 @@ export default function BulkUploadPage() {
                     <span>{uploadProgress.toFixed(2)}%</span>
                   </div>
                   <Progress value={uploadProgress} />
+                </div>
+              )}
+
+              {/* Upload Logs */}
+              {uploadLogs.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Logs en tiempo real</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setUploadLogs([])}
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
+                  <div className="bg-gray-900 text-green-400 p-4 rounded-lg h-80 overflow-y-auto font-mono text-xs">
+                    {uploadLogs.map((log, index) => (
+                      <div key={index} className="mb-1">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
