@@ -10,25 +10,70 @@ import { useState, useEffect } from "react"
 export default function Header() {
   const { theme, toggleTheme } = useTheme()
   const [isCatalogAuthenticated, setIsCatalogAuthenticated] = useState(false)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
 
   // Verificar si el usuario está autenticado en el catálogo
   useEffect(() => {
-    const checkAuth = () => {
+    const checkCatalogAuth = () => {
       const auth = localStorage.getItem('brk_catalog_authenticated')
-      setIsCatalogAuthenticated(auth === 'true')
+      const isAuth = auth === 'true'
+      setIsCatalogAuthenticated(isAuth)
     }
     
-    checkAuth()
+    checkCatalogAuth()
     // Escuchar cambios en localStorage
-    window.addEventListener('storage', checkAuth)
-    return () => window.removeEventListener('storage', checkAuth)
+    window.addEventListener('storage', checkCatalogAuth)
+    // También escuchar los eventos personalizados de login y logout
+    window.addEventListener('catalogLogin', checkCatalogAuth)
+    window.addEventListener('catalogLogout', checkCatalogAuth)
+    return () => {
+      window.removeEventListener('storage', checkCatalogAuth)
+      window.removeEventListener('catalogLogin', checkCatalogAuth)
+      window.removeEventListener('catalogLogout', checkCatalogAuth)
+    }
+  }, [])
+
+  // Verificar si el usuario está autenticado en el admin
+  useEffect(() => {
+    const checkAdminAuth = () => {
+      const auth = localStorage.getItem('autopart_admin_auth')
+      const isAuth = auth === 'true'
+      console.log('🔍 Header: Checking admin auth:', auth, 'isAuth:', isAuth)
+      setIsAdminAuthenticated(isAuth)
+    }
+    
+    checkAdminAuth()
+    // Escuchar cambios en localStorage
+    window.addEventListener('storage', checkAdminAuth)
+    // También escuchar eventos personalizados de login/logout del admin
+    window.addEventListener('adminLogin', checkAdminAuth)
+    window.addEventListener('adminLogout', checkAdminAuth)
+    
+    return () => {
+      window.removeEventListener('storage', checkAdminAuth)
+      window.removeEventListener('adminLogin', checkAdminAuth)
+      window.removeEventListener('adminLogout', checkAdminAuth)
+    }
   }, [])
 
   const handleCatalogLogout = () => {
+    console.log('🚪 Header: Catalog logout initiated')
     localStorage.removeItem('brk_catalog_authenticated')
     setIsCatalogAuthenticated(false)
     // Disparar un evento personalizado para notificar a la página principal
     window.dispatchEvent(new CustomEvent('catalogLogout'))
+    console.log('✅ Header: Catalog logout completed')
+  }
+
+  const handleAdminLogout = () => {
+    console.log('🚪 Header: Admin logout initiated')
+    localStorage.removeItem('autopart_admin_auth')
+    setIsAdminAuthenticated(false)
+    // Disparar evento para notificar a otros componentes
+    window.dispatchEvent(new CustomEvent('adminLogout'))
+    // Redirigir al login del admin
+    window.location.href = '/admin/login'
+    console.log('✅ Header: Admin logout completed')
   }
 
   return (
@@ -46,7 +91,7 @@ export default function Header() {
             asChild
             className="text-base border-red-500 text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
           >
-            <Link href="/admin">
+            <Link href="/admin/login">
               <UserCircle className="mr-2 h-5 w-5" /> Portal Admin
             </Link>
           </Button>
@@ -60,6 +105,19 @@ export default function Header() {
               onClick={handleCatalogLogout} 
               aria-label="Cerrar sesión del catálogo"
               className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              title="Cerrar sesión del catálogo"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )}
+          {isAdminAuthenticated && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleAdminLogout} 
+              aria-label="Cerrar sesión del admin"
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              title="Cerrar sesión del admin"
             >
               <LogOut className="h-5 w-5" />
             </Button>

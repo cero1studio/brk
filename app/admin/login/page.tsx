@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type React from "react"
 
 import { useRouter } from "next/navigation"
@@ -37,7 +37,39 @@ export default function LoginPage() {
     )
   }
   
-  const { login, isLoading: authLoading } = authContext
+  const { login, isLoading: authLoading, isAuthenticated } = authContext
+
+  // Verificar si ya está autenticado y redirigir al dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('✅ LoginPage: User already authenticated, redirecting to dashboard')
+      router.push('/admin/dashboard')
+    }
+  }, [isAuthenticated, router])
+
+  // Mostrar loading mientras verifica la autenticación
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background to-card p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando autenticación...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Si ya está autenticado, no mostrar el formulario
+  if (isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background to-card p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirigiendo al dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
