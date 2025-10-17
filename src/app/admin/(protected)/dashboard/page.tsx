@@ -1,54 +1,85 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Package, FolderPlus, Settings, Tag } from "lucide-react"
+import { Package, FolderPlus, Settings, Tag, RefreshCw } from "lucide-react"
 import { getAllProducts } from "@/lib/bulk-upload-supabase"
+import { useState, useEffect } from "react"
 
-async function getDashboardStats() {
-  try {
-    console.log("🔍 Obteniendo estadísticas del dashboard...")
-    const products = await getAllProducts()
-    console.log(`📊 Productos obtenidos: ${products.length}`)
-
-    // Get unique categories
-    const categories = new Set(products.map((p) => p.category).filter(Boolean))
-    console.log(`📁 Categorías únicas: ${categories.size}`)
-
-    // Get unique brands/marcas
-    const marcas = new Set(products.map((p) => p.marca).filter(Boolean))
-    console.log(`🏷️ Marcas únicas: ${marcas.size}`)
-
-    const stats = {
-      totalProducts: products.length,
-      totalCategories: categories.size,
-      totalMarcas: marcas.size,
-    }
-
-    console.log("✅ Estadísticas calculadas:", stats)
-    return stats
-  } catch (error) {
-    console.error("❌ Error fetching dashboard stats:", error)
-    return {
-      totalProducts: 0,
-      totalCategories: 0,
-      totalMarcas: 0,
-    }
-  }
+interface DashboardStats {
+  totalProducts: number
+  totalCategories: number
+  totalMarcas: number
 }
 
-export default async function AdminDashboardPage() {
-  const { totalProducts, totalCategories, totalMarcas } = await getDashboardStats()
-  
-  console.log("🎯 Dashboard renderizando con datos:", {
-    totalProducts,
-    totalCategories,
-    totalMarcas
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProducts: 0,
+    totalCategories: 0,
+    totalMarcas: 0,
   })
+  const [isLoading, setIsLoading] = useState(true)
 
-  const stats = [
-    { title: "Productos Totales", value: totalProducts.toString(), icon: Package, color: "text-gray-300" },
-    { title: "Categorías", value: totalCategories.toString(), icon: FolderPlus, color: "text-sky-400" },
-    { title: "Marcas", value: totalMarcas.toString(), icon: Tag, color: "text-amber-400" },
+  const fetchDashboardStats = async () => {
+    try {
+      console.log("🔍 Obteniendo estadísticas del dashboard...")
+      setIsLoading(true)
+      const products = await getAllProducts()
+      console.log(`📊 Productos individuales obtenidos: ${products.length}`)
+      console.log("📊 Primeros 3 productos:", products.slice(0, 3))
+
+      // Get unique categories (usando subgrupo que es más específico)
+      const categories = new Set(products.map((p) => p.subgrupo).filter(Boolean))
+      console.log(`📁 Subgrupos únicos: ${categories.size}`)
+      console.log("📁 Subgrupos encontrados:", Array.from(categories))
+
+      // Get unique brands/marcas
+      const marcas = new Set(products.map((p) => p.marca).filter(Boolean))
+      console.log(`🏷️ Marcas únicas: ${marcas.size}`)
+      console.log("🏷️ Marcas encontradas:", Array.from(marcas))
+
+      const newStats = {
+        totalProducts: products.length, // Total de productos individuales (no agrupados)
+        totalCategories: categories.size,
+        totalMarcas: marcas.size,
+      }
+
+      console.log("✅ Estadísticas calculadas (productos individuales):", newStats)
+      setStats(newStats)
+    } catch (error) {
+      console.error("❌ Error fetching dashboard stats:", error)
+      setStats({
+        totalProducts: 0,
+        totalCategories: 0,
+        totalMarcas: 0,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDashboardStats()
+  }, [])
+
+  // Actualizar estadísticas cuando la página se vuelve visible (usuario regresa de otra página)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Dashboard: Página visible, actualizando estadísticas...')
+        fetchDashboardStats()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
+  const statsCards = [
+    { title: "Productos Individuales", value: stats.totalProducts.toString(), icon: Package, color: "text-gray-300" },
+    { title: "Subgrupos", value: stats.totalCategories.toString(), icon: FolderPlus, color: "text-sky-400" },
+    { title: "Marcas", value: stats.totalMarcas.toString(), icon: Tag, color: "text-amber-400" },
   ]
 
   const quickActions = [
@@ -62,23 +93,41 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-headline text-white">Panel de Administración BRK</CardTitle>
-          <CardDescription>
-            ¡Bienvenido de nuevo! Aquí tienes un resumen de tu plataforma BRK Performance Brakes.
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-3xl font-headline text-white">Panel de Administración BRK</CardTitle>
+              <CardDescription>
+                ¡Bienvenido de nuevo! Aquí tienes un resumen de tu plataforma BRK Performance Brakes.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={fetchDashboardStats}
+              disabled={isLoading}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Actualizando...' : 'Actualizar'}
+            </Button>
+          </div>
         </CardHeader>
       </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {stats.map((stat) => (
+        {statsCards.map((stat) => (
           <Card key={stat.title} className="shadow-lg hover:shadow-gray-500/20 transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
               <stat.icon className={`h-5 w-5 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">Datos actualizados</p>
+              <div className={`text-3xl font-bold ${stat.color}`}>
+                {isLoading ? '...' : stat.value}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isLoading ? 'Actualizando...' : 'Datos en tiempo real'}
+              </p>
             </CardContent>
           </Card>
         ))}
