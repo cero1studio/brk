@@ -54,44 +54,27 @@ async function getDashboardStats() {
     console.log(`📊 Found ${allProducts?.length || 0} products in test query`)
     console.log("📊 Sample products:", allProducts?.slice(0, 3))
     
-    // Now get the count
-    const { count, error: countError } = await supabase
+    // Get all products for categories and brands (without limit for accurate count)
+    const { data: allProductsForStats, error: statsError } = await supabase
       .from("products")
-      .select("*", { count: "exact", head: true })
+      .select("marca, subgrupo")
     
-    if (countError) {
-      console.error("❌ Error counting products:", countError)
+    if (statsError) {
+      console.error("❌ Error fetching all products for stats:", statsError)
       return {
         totalProducts: allProducts?.length || 0,
         totalCategories: 0,
         totalMarcas: 0,
       }
     }
-    
-    console.log(`📊 Total products count: ${count}`)
-    
-    // Now get the actual data for categories and brands
-    const { data: products, error } = await supabase
-      .from("products")
-      .select("marca, subgrupo")
-      .limit(1000) // Limit to avoid memory issues
 
-    if (error) {
-      console.error("❌ Error fetching products:", error)
-      return {
-        totalProducts: count || 0,
-        totalCategories: 0,
-        totalMarcas: 0,
-      }
-    }
-
-    console.log(`✅ Found ${products?.length || 0} products in query`)
+    console.log(`✅ Found ${allProductsForStats?.length || 0} products for stats`)
     
-    const categories = new Set(products?.map((p) => p.subgrupo).filter(Boolean) || [])
-    const marcas = new Set(products?.map((p) => p.marca).filter(Boolean) || [])
+    const categories = new Set(allProductsForStats?.map((p) => p.subgrupo).filter(Boolean) || [])
+    const marcas = new Set(allProductsForStats?.map((p) => p.marca).filter(Boolean) || [])
 
     const stats = {
-      totalProducts: count || 0,
+      totalProducts: allProductsForStats?.length || 0,
       totalCategories: categories.size,
       totalMarcas: marcas.size,
     }
