@@ -11,35 +11,59 @@ export default function Header() {
   const { theme, toggleTheme } = useTheme()
   const [isCatalogAuthenticated, setIsCatalogAuthenticated] = useState(false)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Asegurar que el componente esté montado antes de acceder a localStorage
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Verificar si el usuario está autenticado en el catálogo
   useEffect(() => {
+    if (!isMounted) return
+
     const checkCatalogAuth = () => {
-      const auth = localStorage.getItem('brk_catalog_authenticated')
-      const isAuth = auth === 'true'
-      setIsCatalogAuthenticated(isAuth)
+      try {
+        const auth = localStorage.getItem('brk_catalog_authenticated')
+        const isAuth = auth === 'true'
+        console.log('🔍 Header: Checking catalog auth:', auth, 'isAuth:', isAuth)
+        setIsCatalogAuthenticated(isAuth)
+      } catch (error) {
+        console.error('Error checking catalog auth:', error)
+        setIsCatalogAuthenticated(false)
+      }
     }
     
+    // Verificar inmediatamente
     checkCatalogAuth()
+    
     // Escuchar cambios en localStorage
     window.addEventListener('storage', checkCatalogAuth)
     // También escuchar los eventos personalizados de login y logout
     window.addEventListener('catalogLogin', checkCatalogAuth)
     window.addEventListener('catalogLogout', checkCatalogAuth)
+    
     return () => {
       window.removeEventListener('storage', checkCatalogAuth)
       window.removeEventListener('catalogLogin', checkCatalogAuth)
       window.removeEventListener('catalogLogout', checkCatalogAuth)
     }
-  }, [])
+  }, [isMounted])
 
   // Verificar si el usuario está autenticado en el admin
   useEffect(() => {
+    if (!isMounted) return
+
     const checkAdminAuth = () => {
-      const auth = localStorage.getItem('autopart_admin_auth')
-      const isAuth = auth === 'true'
-      console.log('🔍 Header: Checking admin auth:', auth, 'isAuth:', isAuth)
-      setIsAdminAuthenticated(isAuth)
+      try {
+        const auth = localStorage.getItem('autopart_admin_auth')
+        const isAuth = auth === 'true'
+        console.log('🔍 Header: Checking admin auth:', auth, 'isAuth:', isAuth)
+        setIsAdminAuthenticated(isAuth)
+      } catch (error) {
+        console.error('Error checking admin auth:', error)
+        setIsAdminAuthenticated(false)
+      }
     }
     
     checkAdminAuth()
@@ -54,7 +78,7 @@ export default function Header() {
       window.removeEventListener('adminLogin', checkAdminAuth)
       window.removeEventListener('adminLogout', checkAdminAuth)
     }
-  }, [])
+  }, [isMounted])
 
   const handleCatalogLogout = () => {
     console.log('🚪 Header: Catalog logout initiated')
@@ -98,7 +122,7 @@ export default function Header() {
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
-          {isCatalogAuthenticated && (
+          {isMounted && isCatalogAuthenticated && (
             <Button 
               variant="ghost" 
               size="icon" 
@@ -110,7 +134,7 @@ export default function Header() {
               <LogOut className="h-5 w-5" />
             </Button>
           )}
-          {isAdminAuthenticated && (
+          {isMounted && isAdminAuthenticated && (
             <Button 
               variant="ghost" 
               size="icon" 

@@ -282,8 +282,21 @@ function HomePageContent() {
     e.preventDefault()
     const password = (e.target as HTMLFormElement).password.value
     if (password === "catalogo2025") {
+      console.log('🔐 Catalog: Login successful, updating state and localStorage')
       setShowCatalog(true)
-      localStorage.setItem('brk_catalog_authenticated', 'true')
+      
+      try {
+        localStorage.setItem('brk_catalog_authenticated', 'true')
+        console.log('💾 Catalog: Auth state saved to localStorage')
+        
+        // Disparar evento para notificar al header con un pequeño delay para asegurar que el estado se actualice
+        setTimeout(() => {
+          console.log('📡 Catalog: Dispatching catalogLogin event')
+          window.dispatchEvent(new CustomEvent('catalogLogin'))
+        }, 100)
+      } catch (error) {
+        console.error('Error saving catalog auth to localStorage:', error)
+      }
     } else {
       alert("Contraseña incorrecta")
     }
