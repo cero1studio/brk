@@ -30,13 +30,20 @@ async function getDashboardStats() {
     
     console.log("📊 Querying products from database...")
     
-    // First, let's try a simple count query
-    const { count, error: countError } = await supabase
+    // First, let's try a simple query to see if the table exists
+    const { data: allProducts, error: allProductsError } = await supabase
       .from("products")
-      .select("*", { count: "exact", head: true })
+      .select("*")
+      .limit(10) // Just get a few to test
     
-    if (countError) {
-      console.error("❌ Error counting products:", countError)
+    if (allProductsError) {
+      console.error("❌ Error querying products table:", allProductsError)
+      console.error("❌ Error details:", {
+        message: allProductsError.message,
+        details: allProductsError.details,
+        hint: allProductsError.hint,
+        code: allProductsError.code
+      })
       return {
         totalProducts: 0,
         totalCategories: 0,
@@ -44,9 +51,26 @@ async function getDashboardStats() {
       }
     }
     
+    console.log(`📊 Found ${allProducts?.length || 0} products in test query`)
+    console.log("📊 Sample products:", allProducts?.slice(0, 3))
+    
+    // Now get the count
+    const { count, error: countError } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+    
+    if (countError) {
+      console.error("❌ Error counting products:", countError)
+      return {
+        totalProducts: allProducts?.length || 0,
+        totalCategories: 0,
+        totalMarcas: 0,
+      }
+    }
+    
     console.log(`📊 Total products count: ${count}`)
     
-    // Now get the actual data
+    // Now get the actual data for categories and brands
     const { data: products, error } = await supabase
       .from("products")
       .select("marca, subgrupo")
