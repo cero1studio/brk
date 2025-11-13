@@ -92,10 +92,26 @@ export default function ProductFilters() {
 
   const loadFilterOptions = async (currentFilters: FilterState = filters) => {
     try {
-      // Always load ALL available options without filtering
-      const { data: products, error } = await supabase
+      // Build query with progressive filtering
+      let query = supabase
         .from("products")
         .select("subgrupo, marca, linea, modelo, posicion, codigo_brk, ref_fmsi_oem")
+
+      // Apply filters progressively
+      if (currentFilters.subgrupo && currentFilters.subgrupo !== "all_subgrupos") {
+        query = query.eq("subgrupo", currentFilters.subgrupo)
+      }
+      if (currentFilters.marca && currentFilters.marca !== "all_marcas") {
+        query = query.eq("marca", currentFilters.marca)
+      }
+      if (currentFilters.linea && currentFilters.linea !== "all_lineas") {
+        query = query.eq("linea", currentFilters.linea)
+      }
+      if (currentFilters.modelo && currentFilters.modelo !== "all_modelos") {
+        query = query.eq("modelo", currentFilters.modelo)
+      }
+
+      const { data: products, error } = await query
 
       if (error) throw error
 
@@ -104,12 +120,12 @@ export default function ProductFilters() {
           subgrupos: [
             ...new Set(products.map((p) => p.subgrupo || "").filter((s) => s !== null && s !== undefined)),
           ].sort(),
-          marcas: [...new Set(products.map((p) => p.marca).filter(Boolean))],
-          lineas: [...new Set(products.map((p) => p.linea).filter(Boolean))],
-          modelos: [...new Set(products.map((p) => p.modelo).filter(Boolean))],
-          posiciones: [...new Set(products.map((p) => p.posicion).filter(Boolean))],
-          codigosBrk: [...new Set(products.map((p) => p.codigo_brk).filter(Boolean))],
-          refsFmsiOem: [...new Set(products.map((p) => p.ref_fmsi_oem).filter(Boolean))],
+          marcas: [...new Set(products.map((p) => p.marca).filter(Boolean))].sort(),
+          lineas: [...new Set(products.map((p) => p.linea).filter(Boolean))].sort(),
+          modelos: [...new Set(products.map((p) => p.modelo).filter(Boolean))].sort(),
+          posiciones: [...new Set(products.map((p) => p.posicion).filter(Boolean))].sort(),
+          codigosBrk: [...new Set(products.map((p) => p.codigo_brk).filter(Boolean))].sort(),
+          refsFmsiOem: [...new Set(products.map((p) => p.ref_fmsi_oem).filter(Boolean))].sort(),
         }
         setFilterOptions(options)
       }
@@ -135,8 +151,12 @@ export default function ProductFilters() {
     } else if (filterName === "marca") {
       newFilters.linea = "all_lineas"
       newFilters.modelo = "all_modelos"
+      newFilters.posicion = "all_posiciones"
     } else if (filterName === "linea") {
       newFilters.modelo = "all_modelos"
+      newFilters.posicion = "all_posiciones"
+    } else if (filterName === "modelo") {
+      newFilters.posicion = "all_posiciones"
     }
 
     setFilters(newFilters)
@@ -163,7 +183,8 @@ export default function ProductFilters() {
 
     router.push(`/?${params.toString()}`)
 
-    // No need to reload filter options since we always show all available options
+    // Reload filter options with new filters to show only relevant options
+    loadFilterOptions(newFilters)
   }
 
   const handleClearFilters = () => {
@@ -185,7 +206,8 @@ export default function ProductFilters() {
 
     router.push(`/?${params.toString()}`)
 
-    // No need to reload filter options since we always show all available options
+    // Reload filter options without any filters to show all available options
+    loadFilterOptions(initialFilterState)
   }
 
   const filterFieldsRow1 = [
