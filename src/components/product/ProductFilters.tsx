@@ -90,6 +90,11 @@ export default function ProductFilters() {
     loadFilterOptions()
   }, [searchParams.toString()])
 
+  // Función auxiliar para ordenar alfabéticamente (case-insensitive)
+  const sortAlphabetically = (arr: string[]) => {
+    return arr.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true }))
+  }
+
   const loadFilterOptions = async (currentFilters: FilterState = filters) => {
     try {
       // Para cada select, cargamos las opciones basadas solo en los filtros anteriores (no en el actual)
@@ -98,7 +103,7 @@ export default function ProductFilters() {
       const { data: allProducts } = await supabase
         .from("products")
         .select("subgrupo")
-      const subgrupos = [...new Set(allProducts?.map((p) => p.subgrupo || "").filter((s) => s !== null && s !== undefined))].sort()
+      const subgrupos = sortAlphabetically([...new Set(allProducts?.map((p) => p.subgrupo || "").filter((s) => s !== null && s !== undefined))])
 
       // 2. Marcas: filtradas por subgrupo (si existe)
       let marcasQuery = supabase.from("products").select("marca")
@@ -106,7 +111,7 @@ export default function ProductFilters() {
         marcasQuery = marcasQuery.eq("subgrupo", currentFilters.subgrupo)
       }
       const { data: marcasData } = await marcasQuery
-      const marcas = [...new Set(marcasData?.map((p) => p.marca).filter(Boolean))].sort()
+      const marcas = sortAlphabetically([...new Set(marcasData?.map((p) => p.marca).filter(Boolean))])
 
       // 3. Líneas: filtradas por subgrupo y marca (si existen)
       let lineasQuery = supabase.from("products").select("linea")
@@ -117,7 +122,7 @@ export default function ProductFilters() {
         lineasQuery = lineasQuery.eq("marca", currentFilters.marca)
       }
       const { data: lineasData } = await lineasQuery
-      const lineas = [...new Set(lineasData?.map((p) => p.linea).filter(Boolean))].sort()
+      const lineas = sortAlphabetically([...new Set(lineasData?.map((p) => p.linea).filter(Boolean))])
 
       // 4. Modelos: filtradas por subgrupo, marca y línea (si existen)
       let modelosQuery = supabase.from("products").select("modelo")
@@ -131,7 +136,7 @@ export default function ProductFilters() {
         modelosQuery = modelosQuery.eq("linea", currentFilters.linea)
       }
       const { data: modelosData } = await modelosQuery
-      const modelos = [...new Set(modelosData?.map((p) => p.modelo).filter(Boolean))].sort()
+      const modelos = sortAlphabetically([...new Set(modelosData?.map((p) => p.modelo).filter(Boolean))])
 
       // 5. Posiciones: filtradas por subgrupo, marca, línea y modelo (si existen)
       let posicionesQuery = supabase.from("products").select("posicion")
@@ -148,12 +153,12 @@ export default function ProductFilters() {
         posicionesQuery = posicionesQuery.eq("modelo", currentFilters.modelo)
       }
       const { data: posicionesData } = await posicionesQuery
-      const posiciones = [...new Set(posicionesData?.map((p) => p.posicion).filter(Boolean))].sort()
+      const posiciones = sortAlphabetically([...new Set(posicionesData?.map((p) => p.posicion).filter(Boolean))])
 
       // 6. Códigos BRK y Referencias: todos
       const { data: codigosData } = await supabase.from("products").select("codigo_brk, ref_fmsi_oem")
-      const codigosBrk = [...new Set(codigosData?.map((p) => p.codigo_brk).filter(Boolean))].sort()
-      const refsFmsiOem = [...new Set(codigosData?.map((p) => p.ref_fmsi_oem).filter(Boolean))].sort()
+      const codigosBrk = sortAlphabetically([...new Set(codigosData?.map((p) => p.codigo_brk).filter(Boolean))])
+      const refsFmsiOem = sortAlphabetically([...new Set(codigosData?.map((p) => p.ref_fmsi_oem).filter(Boolean))])
 
       const options: FilterOptions = {
         subgrupos,
