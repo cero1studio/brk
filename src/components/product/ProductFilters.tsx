@@ -213,11 +213,6 @@ export default function ProductFilters() {
       }
     })
 
-    const resultsSection = document.getElementById("results-section")
-    if (resultsSection) {
-      resultsSection.scrollIntoView({ behavior: "smooth" })
-    }
-
     router.push(`/?${params.toString()}`)
 
     // Reload filter options with new filters to show only relevant options
@@ -234,11 +229,6 @@ export default function ProductFilters() {
     params.clear()
     if (query) {
       params.set("q", query)
-    }
-
-    const resultsSection = document.getElementById("results-section")
-    if (resultsSection) {
-      resultsSection.scrollIntoView({ behavior: "smooth" })
     }
 
     router.push(`/?${params.toString()}`)
