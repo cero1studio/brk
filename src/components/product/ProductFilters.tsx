@@ -92,43 +92,80 @@ export default function ProductFilters() {
 
   const loadFilterOptions = async (currentFilters: FilterState = filters) => {
     try {
-      // Build query with progressive filtering
-      let query = supabase
+      // Para cada select, cargamos las opciones basadas solo en los filtros anteriores (no en el actual)
+      
+      // 1. Subgrupos: siempre todas las opciones
+      const { data: allProducts } = await supabase
         .from("products")
-        .select("subgrupo, marca, linea, modelo, posicion, codigo_brk, ref_fmsi_oem")
+        .select("subgrupo")
+      const subgrupos = [...new Set(allProducts?.map((p) => p.subgrupo || "").filter((s) => s !== null && s !== undefined))].sort()
 
-      // Apply filters progressively
+      // 2. Marcas: filtradas por subgrupo (si existe)
+      let marcasQuery = supabase.from("products").select("marca")
       if (currentFilters.subgrupo && currentFilters.subgrupo !== "all_subgrupos") {
-        query = query.eq("subgrupo", currentFilters.subgrupo)
+        marcasQuery = marcasQuery.eq("subgrupo", currentFilters.subgrupo)
+      }
+      const { data: marcasData } = await marcasQuery
+      const marcas = [...new Set(marcasData?.map((p) => p.marca).filter(Boolean))].sort()
+
+      // 3. Líneas: filtradas por subgrupo y marca (si existen)
+      let lineasQuery = supabase.from("products").select("linea")
+      if (currentFilters.subgrupo && currentFilters.subgrupo !== "all_subgrupos") {
+        lineasQuery = lineasQuery.eq("subgrupo", currentFilters.subgrupo)
       }
       if (currentFilters.marca && currentFilters.marca !== "all_marcas") {
-        query = query.eq("marca", currentFilters.marca)
+        lineasQuery = lineasQuery.eq("marca", currentFilters.marca)
+      }
+      const { data: lineasData } = await lineasQuery
+      const lineas = [...new Set(lineasData?.map((p) => p.linea).filter(Boolean))].sort()
+
+      // 4. Modelos: filtradas por subgrupo, marca y línea (si existen)
+      let modelosQuery = supabase.from("products").select("modelo")
+      if (currentFilters.subgrupo && currentFilters.subgrupo !== "all_subgrupos") {
+        modelosQuery = modelosQuery.eq("subgrupo", currentFilters.subgrupo)
+      }
+      if (currentFilters.marca && currentFilters.marca !== "all_marcas") {
+        modelosQuery = modelosQuery.eq("marca", currentFilters.marca)
       }
       if (currentFilters.linea && currentFilters.linea !== "all_lineas") {
-        query = query.eq("linea", currentFilters.linea)
+        modelosQuery = modelosQuery.eq("linea", currentFilters.linea)
+      }
+      const { data: modelosData } = await modelosQuery
+      const modelos = [...new Set(modelosData?.map((p) => p.modelo).filter(Boolean))].sort()
+
+      // 5. Posiciones: filtradas por subgrupo, marca, línea y modelo (si existen)
+      let posicionesQuery = supabase.from("products").select("posicion")
+      if (currentFilters.subgrupo && currentFilters.subgrupo !== "all_subgrupos") {
+        posicionesQuery = posicionesQuery.eq("subgrupo", currentFilters.subgrupo)
+      }
+      if (currentFilters.marca && currentFilters.marca !== "all_marcas") {
+        posicionesQuery = posicionesQuery.eq("marca", currentFilters.marca)
+      }
+      if (currentFilters.linea && currentFilters.linea !== "all_lineas") {
+        posicionesQuery = posicionesQuery.eq("linea", currentFilters.linea)
       }
       if (currentFilters.modelo && currentFilters.modelo !== "all_modelos") {
-        query = query.eq("modelo", currentFilters.modelo)
+        posicionesQuery = posicionesQuery.eq("modelo", currentFilters.modelo)
       }
+      const { data: posicionesData } = await posicionesQuery
+      const posiciones = [...new Set(posicionesData?.map((p) => p.posicion).filter(Boolean))].sort()
 
-      const { data: products, error } = await query
+      // 6. Códigos BRK y Referencias: todos
+      const { data: codigosData } = await supabase.from("products").select("codigo_brk, ref_fmsi_oem")
+      const codigosBrk = [...new Set(codigosData?.map((p) => p.codigo_brk).filter(Boolean))].sort()
+      const refsFmsiOem = [...new Set(codigosData?.map((p) => p.ref_fmsi_oem).filter(Boolean))].sort()
 
-      if (error) throw error
-
-      if (products) {
-        const options: FilterOptions = {
-          subgrupos: [
-            ...new Set(products.map((p) => p.subgrupo || "").filter((s) => s !== null && s !== undefined)),
-          ].sort(),
-          marcas: [...new Set(products.map((p) => p.marca).filter(Boolean))].sort(),
-          lineas: [...new Set(products.map((p) => p.linea).filter(Boolean))].sort(),
-          modelos: [...new Set(products.map((p) => p.modelo).filter(Boolean))].sort(),
-          posiciones: [...new Set(products.map((p) => p.posicion).filter(Boolean))].sort(),
-          codigosBrk: [...new Set(products.map((p) => p.codigo_brk).filter(Boolean))].sort(),
-          refsFmsiOem: [...new Set(products.map((p) => p.ref_fmsi_oem).filter(Boolean))].sort(),
-        }
-        setFilterOptions(options)
+      const options: FilterOptions = {
+        subgrupos,
+        marcas,
+        lineas,
+        modelos,
+        posiciones,
+        codigosBrk,
+        refsFmsiOem,
       }
+      
+      setFilterOptions(options)
     } catch (error) {
       console.error("Error loading filter options:", error)
     } finally {
