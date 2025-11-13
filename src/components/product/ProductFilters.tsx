@@ -228,10 +228,9 @@ export default function ProductFilters() {
     setIsLoading(true)
 
     setFilters(initialFilterState)
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams()
 
-    const query = params.get("q")
-    params.clear()
+    const query = searchParams.get("q")
     if (query) {
       params.set("q", query)
     }
